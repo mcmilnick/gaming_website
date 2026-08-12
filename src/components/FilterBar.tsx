@@ -1,0 +1,80 @@
+"use client";
+
+import { usePathname, useRouter } from "next/navigation";
+import { CatalogFilterFields } from "./CatalogFilterFields";
+import { SORT_OPTIONS, type SortOption } from "@/lib/catalogSearch";
+
+type FilterBarProps = {
+  consoles: string[];
+  currentSearch: string;
+  currentConsole: string;
+  currentSort: SortOption;
+  currentSource: string;
+  currentHideInLibrary: boolean;
+};
+
+export function FilterBar({
+  consoles,
+  currentSearch,
+  currentConsole,
+  currentSort,
+  currentSource,
+  currentHideInLibrary,
+}: FilterBarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  function navigate(
+    overrides: Partial<Record<"search" | "console" | "sort" | "source" | "hideInLibrary", string>>
+  ) {
+    const params = new URLSearchParams();
+    const next = {
+      search: currentSearch,
+      console: currentConsole,
+      sort: currentSort,
+      source: currentSource,
+      hideInLibrary: currentHideInLibrary ? "1" : "",
+      ...overrides,
+    };
+    if (next.search) params.set("search", next.search);
+    if (next.console) params.set("console", next.console);
+    if (next.sort) params.set("sort", next.sort);
+    if (next.source && next.source !== "base") params.set("source", next.source);
+    if (next.hideInLibrary) params.set("hideInLibrary", next.hideInLibrary);
+    router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
+  }
+
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <CatalogFilterFields
+        consoles={consoles}
+        search={currentSearch}
+        onSearchChange={(value) => navigate({ search: value })}
+        console={currentConsole}
+        onConsoleChange={(value) => navigate({ console: value })}
+        sort={currentSort}
+        onSortChange={(value) => navigate({ sort: value })}
+        sortOptions={SORT_OPTIONS}
+      />
+
+      <select
+        defaultValue={currentSource || "base"}
+        onChange={(e) => navigate({ source: e.target.value })}
+        className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+      >
+        <option value="base">Base games</option>
+        <option value="custom">My added games</option>
+        <option value="all">Base + mine</option>
+      </select>
+
+      <label className="flex items-center gap-2 text-sm text-zinc-300">
+        <input
+          type="checkbox"
+          defaultChecked={currentHideInLibrary}
+          onChange={(e) => navigate({ hideInLibrary: e.target.checked ? "1" : "" })}
+        />
+        Hide games already in my library
+      </label>
+    </div>
+  );
+}
