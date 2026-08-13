@@ -5,6 +5,9 @@ import Link from "next/link";
 import { ALL_GAMES } from "@/lib/games";
 import { addCustomGame, removeCustomGame } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
+import { useLists } from "@/hooks/useLists";
+import { removeEntryFromList } from "@/lib/lists";
+import { removeFromLibrary } from "@/lib/library";
 import type { GameRecord } from "@/lib/types";
 
 const EMPTY_FORM = {
@@ -17,6 +20,7 @@ const EMPTY_FORM = {
 
 export default function AddGamesPage() {
   const { games, hydrated } = useCustomGames();
+  const { lists } = useLists();
   const [form, setForm] = useState(EMPTY_FORM);
   const [copyQuery, setCopyQuery] = useState("");
 
@@ -53,6 +57,16 @@ export default function AddGamesPage() {
     });
     setForm(EMPTY_FORM);
     setCopyQuery("");
+  }
+
+  function handleRemove(gameId: string) {
+    removeFromLibrary(gameId);
+    for (const list of lists) {
+      if (list.entries.some((entry) => entry.gameId === gameId)) {
+        removeEntryFromList(list.id, gameId);
+      }
+    }
+    removeCustomGame(gameId);
   }
 
   return (
@@ -198,7 +212,11 @@ export default function AddGamesPage() {
               </div>
               <button
                 type="button"
-                onClick={() => removeCustomGame(game.id)}
+                onClick={() => {
+                  if (confirm(`Delete "${game.title}"? This removes it from your catalog, Library, and any lists.`)) {
+                    handleRemove(game.id);
+                  }
+                }}
                 className="text-xs text-red-400 hover:text-red-300"
               >
                 Remove

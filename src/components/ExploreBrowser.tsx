@@ -54,6 +54,7 @@ export function ExploreBrowser() {
   );
 
   const { items: results, count } = paginate(filtered, page, PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
   function buildHref(targetPage: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -65,14 +66,14 @@ export function ExploreBrowser() {
     <div className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="text-2xl font-bold text-zinc-100">All Games</h1>
       <p className="mt-1 text-sm text-zinc-400">
-        {count.toLocaleString()} games — sourced from Wikipedia&apos;s{" "}
+        {count.toLocaleString()} games — sourced from{" "}
         <a
-          href="https://en.wikipedia.org/wiki/List_of_Game_Boy_games"
+          href="https://www.igdb.com/"
           target="_blank"
           rel="noreferrer"
           className="underline hover:text-zinc-200"
         >
-          List of Game Boy games
+          IGDB
         </a>{" "}
         plus anything you&apos;ve added yourself
       </p>
@@ -98,7 +99,7 @@ export function ExploreBrowser() {
         </div>
       )}
 
-      <Pagination page={page} hasNext={page * PAGE_SIZE < count} buildHref={buildHref} />
+      <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );
 }

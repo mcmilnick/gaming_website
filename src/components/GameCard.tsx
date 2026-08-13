@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { GameRecord } from "@/lib/types";
 import { isCustomGameId } from "@/lib/customGames";
@@ -23,13 +24,27 @@ export function GameCard({ game }: { game: GameRecord }) {
               Mine
             </span>
           )}
-          <span className="text-3xl">🎮</span>
-          <span className="line-clamp-3 text-sm font-medium text-zinc-200 group-hover:text-white">
-            {game.title}
-          </span>
+          {game.coverUrl ? (
+            <Image
+              src={game.coverUrl}
+              alt={game.title}
+              fill
+              className="object-cover transition-transform duration-200 group-hover:scale-105"
+              sizes="(max-width: 768px) 50vw, 20vw"
+            />
+          ) : (
+            <>
+              <span className="text-3xl">🎮</span>
+              <span className="line-clamp-3 text-sm font-medium text-zinc-200 group-hover:text-white">
+                {game.title}
+              </span>
+            </>
+          )}
         </div>
         <div className="p-3">
-          <div className="flex flex-wrap gap-1">
+          <p className="line-clamp-1 text-sm font-medium text-zinc-100">{game.title}</p>
+          <p className="text-xs text-zinc-500">{game.console}</p>
+          <div className="mt-1 flex flex-wrap gap-1">
             {regionBadges(game).map((badge) => (
               <span key={badge} className="rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-400">
                 {badge}

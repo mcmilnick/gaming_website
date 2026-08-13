@@ -8,4 +8,5 @@ export type GameRecord = {
   releaseNA: string | null;
   releasePAL: string | null;
   releaseYear: number | null;
+  coverUrl: string | null;
 };

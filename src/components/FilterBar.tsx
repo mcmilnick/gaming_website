@@ -62,9 +62,9 @@ export function FilterBar({
         onChange={(e) => navigate({ source: e.target.value })}
         className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
       >
-        <option value="base">Base games</option>
-        <option value="custom">My added games</option>
-        <option value="all">Base + mine</option>
+        <option value="base">Site Games</option>
+        <option value="custom">My Added Games</option>
+        <option value="all">Site Games + Mine</option>
       </select>
 
       <label className="flex items-center gap-2 text-sm text-zinc-300">

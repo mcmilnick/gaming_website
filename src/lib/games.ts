@@ -1,13 +1,10 @@
-import rawGames from "@/data/gameboy-games.json";
+import rawGames from "@/data/games.json";
 import type { GameRecord } from "./types";
 import { filterAndSortByCatalog, getDistinctConsoles, type CatalogFilters } from "./catalogSearch";
 
-const GAME_BOY = "Game Boy";
-
-export const ALL_GAMES: GameRecord[] = (rawGames as Omit<GameRecord, "console">[]).map((game) => ({
-  ...game,
-  console: GAME_BOY,
-}));
+// Sourced by scripts/fetch-igdb-games.js - each record already carries its
+// own `console`, since the dataset spans multiple platforms.
+export const ALL_GAMES: GameRecord[] = rawGames as GameRecord[];
 
 export const PAGE_SIZE = 24;
 

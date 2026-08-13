@@ -2,7 +2,7 @@ import { createLocalStore } from "./localStore";
 import type { GameRecord } from "./types";
 
 // User-added games get ids in this namespace so they can never collide with
-// the base catalog's Wikipedia-derived slugs.
+// the base catalog's ids.
 const CUSTOM_ID_PREFIX = "custom-";
 
 export type CustomGameInput = {
@@ -53,6 +53,7 @@ export function addCustomGame(input: CustomGameInput): GameRecord {
     releaseNA: null,
     releasePAL: null,
     releaseYear: input.releaseYear,
+    coverUrl: null,
   };
   store.writeAll([...games, game]);
   return game;
