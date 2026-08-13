@@ -9,8 +9,10 @@ import { useCustomGames } from "@/hooks/useCustomGames";
 import { useLists } from "@/hooks/useLists";
 import { removeEntryFromList, type GameList, type ListEntry } from "@/lib/lists";
 import { removeFromLibrary } from "@/lib/library";
+import { useLibrary } from "@/hooks/useLibrary";
 import { LibraryButton } from "@/components/LibraryButton";
 import { CopyListTagsButton } from "@/components/CopyListTagsButton";
+import { AddToListSelect } from "@/components/AddToListSelect";
 
 function regions(game: { releaseJapan: string | null; releaseNA: string | null; releasePAL: string | null }) {
   return [
@@ -24,12 +26,17 @@ export function GameDetailView({ id }: { id: string }) {
   const baseGame = getGameById(id);
   const { games: customGames, hydrated } = useCustomGames();
   const { lists } = useLists();
+  const { entries: libraryEntries } = useLibrary();
   const router = useRouter();
   const game = baseGame ?? customGames.find((candidate) => candidate.id === id);
   const hasRegionData = Boolean(game?.releaseJapan || game?.releaseNA || game?.releasePAL);
   const memberships = lists
     .map((list) => ({ list, entry: list.entries.find((e) => e.gameId === id) }))
     .filter((m): m is { list: GameList; entry: ListEntry } => Boolean(m.entry));
+  // Adding to a list is only offered once the game is in the Library, so a
+  // list entry always has a status to show (a "no status" case can't occur).
+  const inLibrary = libraryEntries.some((entry) => entry.id === id);
+  const showListsSection = inLibrary || memberships.length > 0;
 
   function handleDelete() {
     if (!game) return;
@@ -124,26 +131,35 @@ export function GameDetailView({ id }: { id: string }) {
             )}
           </div>
 
-          {memberships.length > 0 && (
+          {showListsSection && (
             <div className="mt-4">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs text-zinc-500">In your lists</p>
-                <CopyListTagsButton
-                  tags={memberships.map(({ list, entry }) => ({ name: list.name, value: entry.value }))}
-                />
+                {memberships.length > 0 && (
+                  <CopyListTagsButton
+                    tags={memberships.map(({ list, entry }) => ({ name: list.name, value: entry.value }))}
+                  />
+                )}
               </div>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {memberships.map(({ list, entry }) => (
-                  <Link
-                    key={list.id}
-                    href={`/lists/${list.id}`}
-                    className="rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-xs text-zinc-300 hover:text-zinc-100 hover:underline"
-                  >
-                    {list.name}
-                    {entry.value ? `: ${entry.value}` : ""}
-                  </Link>
-                ))}
-              </div>
+              {memberships.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {memberships.map(({ list, entry }) => (
+                    <Link
+                      key={list.id}
+                      href={`/lists/${list.id}`}
+                      className="rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-xs text-zinc-300 hover:text-zinc-100 hover:underline"
+                    >
+                      {list.name}
+                      {entry.value ? `: ${entry.value}` : ""}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {inLibrary && (
+                <div className="mt-2">
+                  <AddToListSelect gameId={game.id} />
+                </div>
+              )}
             </div>
           )}
         </div>

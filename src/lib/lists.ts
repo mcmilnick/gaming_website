@@ -110,18 +110,30 @@ export function removeEntryFromList(listId: string, gameId: string): void {
   store.writeAll(next);
 }
 
-export function moveEntry(listId: string, gameId: string, direction: "up" | "down"): void {
+// Drag-and-drop reorder: moves `gameId` to just before/after `targetGameId`.
+// Resolves the target's position *after* removing the dragged entry, so it's
+// correct regardless of whether the drag moved forward or backward past it.
+export function moveEntryRelativeTo(
+  listId: string,
+  gameId: string,
+  targetGameId: string,
+  position: "before" | "after"
+): void {
+  if (gameId === targetGameId) return;
+
   const lists = store.readAll();
   const index = lists.findIndex((list) => list.id === listId);
   if (index === -1) return;
 
   const entries = [...lists[index].entries];
-  const from = entries.findIndex((entry) => entry.gameId === gameId);
-  if (from === -1) return;
-  const to = direction === "up" ? from - 1 : from + 1;
-  if (to < 0 || to >= entries.length) return;
+  const fromIndex = entries.findIndex((entry) => entry.gameId === gameId);
+  if (fromIndex === -1) return;
+  const [moved] = entries.splice(fromIndex, 1);
 
-  [entries[from], entries[to]] = [entries[to], entries[from]];
+  const targetIndex = entries.findIndex((entry) => entry.gameId === targetGameId);
+  const insertIndex = targetIndex === -1 ? fromIndex : targetIndex + (position === "after" ? 1 : 0);
+  entries.splice(insertIndex, 0, moved);
+
   const next = [...lists];
   next[index] = { ...next[index], entries, updatedAt: new Date().toISOString() };
   store.writeAll(next);

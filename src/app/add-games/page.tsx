@@ -8,6 +8,7 @@ import { useCustomGames } from "@/hooks/useCustomGames";
 import { useLists } from "@/hooks/useLists";
 import { removeEntryFromList } from "@/lib/lists";
 import { removeFromLibrary } from "@/lib/library";
+import { normalizeForSearch } from "@/lib/catalogSearch";
 import type { GameRecord } from "@/lib/types";
 
 const EMPTY_FORM = {
@@ -26,9 +27,9 @@ export default function AddGamesPage() {
 
   const combinedGames = useMemo(() => [...ALL_GAMES, ...games], [games]);
   const copyResults = useMemo(() => {
-    const query = copyQuery.trim().toLowerCase();
+    const query = normalizeForSearch(copyQuery.trim());
     if (!query) return [];
-    return combinedGames.filter((game) => game.title.toLowerCase().includes(query)).slice(0, 8);
+    return combinedGames.filter((game) => normalizeForSearch(game.title).includes(query)).slice(0, 8);
   }, [combinedGames, copyQuery]);
 
   function handleCopyFrom(game: GameRecord) {

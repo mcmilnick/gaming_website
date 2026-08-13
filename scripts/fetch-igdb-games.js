@@ -27,7 +27,21 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
 }
 
 // Add more platform names here to expand the catalog later.
-const TARGET_PLATFORM_NAMES = ["Game Boy", "Game Boy Color", "Game Boy Advance"];
+// Exact names as IGDB has them - verify with the platforms endpoint before
+// adding a new one, rather than guessing (e.g. "Sega Mega Drive/Genesis",
+// not "Sega Genesis").
+const TARGET_PLATFORM_NAMES = [
+  "Game Boy",
+  "Game Boy Color",
+  "Game Boy Advance",
+  "Nintendo Entertainment System",
+  "Super Nintendo Entertainment System",
+  "Sega Mega Drive/Genesis",
+  "Family Computer",
+  "PlayStation",
+  "Nintendo DS",
+  "Nintendo 3DS",
+];
 
 const OUTPUT_PATH = path.join(__dirname, "..", "src", "data", "games.json");
 const PAGE_SIZE = 500;

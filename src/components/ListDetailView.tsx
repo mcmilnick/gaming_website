@@ -1,14 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLists } from "@/hooks/useLists";
 import { useLibrary } from "@/hooks/useLibrary";
+import { useCustomGames } from "@/hooks/useCustomGames";
+import { ALL_GAMES } from "@/lib/games";
 import {
   addEntryToList,
   deleteList,
-  moveEntry,
+  moveEntryRelativeTo,
   removeEntryFromList,
   renameList,
   sortEntriesByValue,
@@ -16,14 +19,20 @@ import {
   type ListSortOption,
 } from "@/lib/lists";
 import type { LibraryEntry } from "@/lib/library";
+import type { GameRecord } from "@/lib/types";
+import { normalizeForSearch } from "@/lib/catalogSearch";
+import { StatusPole } from "@/components/StatusPole";
 
 export function ListDetailView({ id }: { id: string }) {
   const { lists, hydrated } = useLists();
   const { entries: libraryEntries } = useLibrary();
+  const { games: customGames } = useCustomGames();
   const router = useRouter();
   const [addQuery, setAddQuery] = useState("");
   const [nameDraft, setNameDraft] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<ListSortOption>("user");
+  const [draggedGameId, setDraggedGameId] = useState<string | null>(null);
+  const [dragOverGameId, setDragOverGameId] = useState<string | null>(null);
 
   const list = lists.find((candidate) => candidate.id === id);
   const libraryById = useMemo(() => {
@@ -31,6 +40,14 @@ export function ListDetailView({ id }: { id: string }) {
     for (const entry of libraryEntries) map.set(entry.id, entry);
     return map;
   }, [libraryEntries]);
+  // List entries only store a gameId - resolve the live catalog record to
+  // get cover art (Library snapshots don't carry it).
+  const catalogById = useMemo(() => {
+    const map = new Map<string, GameRecord>();
+    for (const game of ALL_GAMES) map.set(game.id, game);
+    for (const game of customGames) map.set(game.id, game);
+    return map;
+  }, [customGames]);
 
   const displayedEntries = useMemo(() => {
     if (!list) return [];
@@ -38,11 +55,11 @@ export function ListDetailView({ id }: { id: string }) {
   }, [list, sortBy]);
 
   const addResults = useMemo(() => {
-    const query = addQuery.trim().toLowerCase();
+    const query = normalizeForSearch(addQuery.trim());
     if (!query || !list) return [];
     const existingIds = new Set(list.entries.map((entry) => entry.gameId));
     return libraryEntries
-      .filter((entry) => !existingIds.has(entry.id) && entry.title.toLowerCase().includes(query))
+      .filter((entry) => !existingIds.has(entry.id) && normalizeForSearch(entry.title).includes(query))
       .slice(0, 8);
   }, [addQuery, libraryEntries, list]);
 
@@ -61,6 +78,35 @@ export function ListDetailView({ id }: { id: string }) {
         </p>
       </div>
     );
+  }
+
+  const canReorder = sortBy === "user";
+
+  function handleDragStart(gameId: string) {
+    if (!canReorder) return;
+    setDraggedGameId(gameId);
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>, gameId: string) {
+    if (!draggedGameId || draggedGameId === gameId) return;
+    e.preventDefault();
+    setDragOverGameId(gameId);
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>, targetGameId: string) {
+    e.preventDefault();
+    if (list && draggedGameId && draggedGameId !== targetGameId) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const position = e.clientY > rect.top + rect.height / 2 ? "after" : "before";
+      moveEntryRelativeTo(list.id, draggedGameId, targetGameId, position);
+    }
+    setDraggedGameId(null);
+    setDragOverGameId(null);
+  }
+
+  function handleDragEnd() {
+    setDraggedGameId(null);
+    setDragOverGameId(null);
   }
 
   return (
@@ -157,42 +203,48 @@ export function ListDetailView({ id }: { id: string }) {
         ) : (
           displayedEntries.map((entry, index) => {
             const libraryEntry = libraryById.get(entry.gameId);
-            const title = libraryEntry?.title ?? entry.gameId;
-            const canReorder = sortBy === "user";
+            const catalogGame = catalogById.get(entry.gameId);
+            const title = catalogGame?.title ?? libraryEntry?.title ?? entry.gameId;
+            const coverUrl = catalogGame?.coverUrl ?? null;
 
             return (
               <div
                 key={entry.gameId}
-                className="flex items-center gap-3 rounded border border-zinc-800 bg-zinc-900 px-3 py-2"
+                onDragOver={(e) => handleDragOver(e, entry.gameId)}
+                onDrop={(e) => handleDrop(e, entry.gameId)}
+                className={`flex items-center gap-3 rounded border bg-zinc-900 px-3 py-2 transition-colors ${
+                  dragOverGameId === entry.gameId
+                    ? "border-emerald-600"
+                    : "border-zinc-800"
+                } ${draggedGameId === entry.gameId ? "opacity-40" : ""}`}
               >
-                <div className="flex flex-col">
-                  <button
-                    type="button"
-                    onClick={() => moveEntry(list.id, entry.gameId, "up")}
-                    disabled={!canReorder || index === 0}
-                    title={canReorder ? undefined : "Switch to User order to reorder"}
-                    className="text-xs text-zinc-400 hover:text-zinc-100 disabled:opacity-20"
-                    aria-label="Move up"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveEntry(list.id, entry.gameId, "down")}
-                    disabled={!canReorder || index === displayedEntries.length - 1}
-                    title={canReorder ? undefined : "Switch to User order to reorder"}
-                    className="text-xs text-zinc-400 hover:text-zinc-100 disabled:opacity-20"
-                    aria-label="Move down"
-                  >
-                    ▼
-                  </button>
-                </div>
+                <span
+                  draggable={canReorder}
+                  onDragStart={() => handleDragStart(entry.gameId)}
+                  onDragEnd={handleDragEnd}
+                  title={canReorder ? "Drag to reorder" : "Switch to User order to reorder"}
+                  className={`flex-shrink-0 px-1 text-zinc-500 ${
+                    canReorder ? "cursor-grab active:cursor-grabbing hover:text-zinc-300" : "opacity-20"
+                  }`}
+                  aria-label="Drag to reorder"
+                >
+                  ⠿
+                </span>
 
-                <span className="w-6 flex-shrink-0 text-center text-xs text-zinc-500">{index + 1}</span>
+                <span className="w-6 flex-shrink-0 text-center text-sm font-medium text-zinc-400">{index + 1}</span>
+
+                <Link
+                  href={`/game/${entry.gameId}`}
+                  className="relative h-14 w-10 flex-shrink-0 overflow-hidden rounded bg-zinc-800"
+                >
+                  {coverUrl && <Image src={coverUrl} alt={title} fill className="object-cover" sizes="40px" />}
+                </Link>
 
                 <Link href={`/game/${entry.gameId}`} className="flex-1 text-sm text-zinc-100 hover:underline">
                   {title}
                 </Link>
+
+                <StatusPole status={libraryEntry?.status} />
 
                 <input
                   defaultValue={entry.value ?? ""}

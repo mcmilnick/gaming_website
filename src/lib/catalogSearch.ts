@@ -31,12 +31,21 @@ export type CatalogFilters = {
   sort?: SortOption;
 };
 
+// Strips accents/diacritics before lowercasing, so searching "pokemon"
+// finds "Pokémon" - used everywhere titles get matched against a query.
+export function normalizeForSearch(text: string): string {
+  return text
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
 export function filterAndSortByCatalog<T extends CatalogSearchable>(items: T[], filters: CatalogFilters): T[] {
   let results = items;
 
   if (filters.search) {
-    const query = filters.search.toLowerCase();
-    results = results.filter((item) => item.title.toLowerCase().includes(query));
+    const query = normalizeForSearch(filters.search);
+    results = results.filter((item) => normalizeForSearch(item.title).includes(query));
   }
 
   if (filters.console) {
