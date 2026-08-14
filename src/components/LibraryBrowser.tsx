@@ -81,6 +81,9 @@ export function LibraryBrowser() {
         </Link>
         .
       </p>
+      <p className="mt-1 text-sm text-zinc-400">
+        EX: <code className="rounded bg-zinc-800 px-1 py-0.5 text-xs">[speedrunning times: 39:34]</code>
+      </p>
 
       <Panel className="mt-6">
         <FilterBar
