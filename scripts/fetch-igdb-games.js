@@ -59,6 +59,8 @@ const TARGET_PLATFORM_NAMES = [
   "Virtual Boy",
   "Xbox",
   "3DO Interactive Multiplayer",
+  "DOS",
+  "Dreamcast",
 ];
 
 const OUTPUT_PATH = path.join(__dirname, "..", "src", "data", "games.json");
