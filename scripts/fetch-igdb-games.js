@@ -41,6 +41,21 @@ const TARGET_PLATFORM_NAMES = [
   "PlayStation",
   "Nintendo DS",
   "Nintendo 3DS",
+  "Nintendo 64",
+  "Nintendo GameCube",
+  "Sega Saturn",
+  "TurboGrafx-16/PC Engine",
+  "Turbografx-16/PC Engine CD",
+  "PC Engine SuperGrafx",
+  "Super Famicom",
+  "PlayStation Portable",
+  "MSX",
+  "MSX2",
+  "Neo Geo AES",
+  "Neo Geo MVS",
+  "Neo Geo CD",
+  "Neo Geo Pocket",
+  "Neo Geo Pocket Color",
 ];
 
 const OUTPUT_PATH = path.join(__dirname, "..", "src", "data", "games.json");
@@ -88,7 +103,7 @@ async function igdbQuery(accessToken, endpoint, body) {
 
 async function findPlatforms(accessToken) {
   const nameList = TARGET_PLATFORM_NAMES.map((name) => `"${name}"`).join(",");
-  const body = `fields id,name; where name = (${nameList}); limit 20;`;
+  const body = `fields id,name; where name = (${nameList}); limit ${TARGET_PLATFORM_NAMES.length};`;
   const platforms = await igdbQuery(accessToken, "platforms", body);
   console.log("Resolved platforms:", platforms);
 

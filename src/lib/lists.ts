@@ -9,12 +9,18 @@ export type ListEntry = {
 export type GameList = {
   id: string;
   name: string;
+  notes: string;
   entries: ListEntry[];
   createdAt: string;
   updatedAt: string;
 };
 
-const store = createLocalStore<GameList>("retroexplore:lists:v1", "retroexplore:lists:change");
+const store = createLocalStore<GameList>(
+  "retroexplore:lists:v1",
+  "retroexplore:lists:change",
+  // Lists saved before comments were tracked don't have this field.
+  (list) => ({ ...list, notes: list.notes ?? "" })
+);
 
 function slugify(name: string): string {
   return name
@@ -55,6 +61,7 @@ export function createList(name: string): GameList {
   const list: GameList = {
     id: `list-${slugify(trimmed)}-${Date.now().toString(36)}`,
     name: trimmed,
+    notes: "",
     entries: [],
     createdAt: now,
     updatedAt: now,
@@ -71,6 +78,15 @@ export function renameList(id: string, name: string): void {
   if (index === -1) return;
   const next = [...lists];
   next[index] = { ...next[index], name: trimmed, updatedAt: new Date().toISOString() };
+  store.writeAll(next);
+}
+
+export function updateListNotes(id: string, notes: string): void {
+  const lists = store.readAll();
+  const index = lists.findIndex((list) => list.id === id);
+  if (index === -1) return;
+  const next = [...lists];
+  next[index] = { ...next[index], notes, updatedAt: new Date().toISOString() };
   store.writeAll(next);
 }
 

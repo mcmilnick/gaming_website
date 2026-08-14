@@ -15,6 +15,7 @@ import {
   removeEntryFromList,
   renameList,
   sortEntriesByValue,
+  updateListNotes,
   LIST_SORT_OPTIONS,
   type ListSortOption,
 } from "@/lib/lists";
@@ -30,6 +31,7 @@ export function ListDetailView({ id }: { id: string }) {
   const router = useRouter();
   const [addQuery, setAddQuery] = useState("");
   const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [notesDraft, setNotesDraft] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<ListSortOption>("user");
   const [draggedGameId, setDraggedGameId] = useState<string | null>(null);
   const [dragOverGameId, setDragOverGameId] = useState<string | null>(null);
@@ -140,6 +142,21 @@ export function ListDetailView({ id }: { id: string }) {
           Delete list
         </button>
       </div>
+
+      <textarea
+        value={notesDraft ?? list.notes}
+        onChange={(e) => setNotesDraft(e.target.value)}
+        onBlur={() => {
+          if (notesDraft !== null && notesDraft !== list.notes) {
+            updateListNotes(list.id, notesDraft);
+          }
+          setNotesDraft(null);
+        }}
+        placeholder="Comments about this list..."
+        rows={2}
+        className="mt-2 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm text-zinc-300 placeholder:text-zinc-600 focus:border-emerald-600 focus:outline-none"
+      />
+
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-zinc-400">
           {list.entries.length} game{list.entries.length === 1 ? "" : "s"}, in order.
