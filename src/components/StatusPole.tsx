@@ -1,7 +1,7 @@
 import type { LibraryStatus } from "@/lib/library";
 
-// A quiet visual cue for a list entry's Library play status - only Playing
-// and Backlog get a treatment; Completed/Dropped/unknown stay blank so the
+// A quiet visual cue for a list entry's Library play status - only Playing,
+// Backlog, and Dropped get a treatment; Completed/unknown stay blank so the
 // row stays clean.
 export function StatusPole({ status }: { status: LibraryStatus | undefined }) {
   if (status === "playing") {
@@ -25,6 +25,23 @@ export function StatusPole({ status }: { status: LibraryStatus | undefined }) {
           ✕
         </span>
       </div>
+    );
+  }
+
+  if (status === "abandoned") {
+    return (
+      <div
+        className="h-10 w-4 flex-shrink-0 rounded-sm"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.35), transparent 55%)," +
+            "radial-gradient(ellipse at 65% 55%, rgba(255,255,255,0.2), transparent 50%)," +
+            "radial-gradient(ellipse at 40% 85%, rgba(255,255,255,0.25), transparent 55%)," +
+            "linear-gradient(180deg, #71717a, #52525b)",
+        }}
+        title="Dropped"
+        aria-label="Dropped"
+      />
     );
   }
 
