@@ -31,12 +31,15 @@ export type CatalogFilters = {
   sort?: SortOption;
 };
 
-// Strips accents/diacritics before lowercasing, so searching "pokemon"
-// finds "Pokémon" - used everywhere titles get matched against a query.
+// Strips accents/diacritics and spacing before lowercasing, so searching
+// "pokemon" finds "Pokémon" and "bomberman special" finds "Bomber Man
+// Special" - IGDB's own titles aren't always spaced/accented consistently.
+// Used everywhere titles get matched against a query.
 export function normalizeForSearch(text: string): string {
   return text
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, "")
     .toLowerCase();
 }
 

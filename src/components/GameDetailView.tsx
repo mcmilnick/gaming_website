@@ -8,7 +8,7 @@ import { isCustomGameId, removeCustomGame } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { useLists } from "@/hooks/useLists";
 import { removeEntryFromList, type GameList, type ListEntry } from "@/lib/lists";
-import { removeFromLibrary } from "@/lib/library";
+import { removeFromLibrary, updateEntry, STATUS_LABELS, type LibraryStatus } from "@/lib/library";
 import { useLibrary } from "@/hooks/useLibrary";
 import { LibraryButton } from "@/components/LibraryButton";
 import { CopyListTagsButton } from "@/components/CopyListTagsButton";
@@ -35,7 +35,8 @@ export function GameDetailView({ id }: { id: string }) {
     .filter((m): m is { list: GameList; entry: ListEntry } => Boolean(m.entry));
   // Adding to a list is only offered once the game is in the Library, so a
   // list entry always has a status to show (a "no status" case can't occur).
-  const inLibrary = libraryEntries.some((entry) => entry.id === id);
+  const libraryEntry = libraryEntries.find((entry) => entry.id === id);
+  const inLibrary = Boolean(libraryEntry);
   const showListsSection = inLibrary || memberships.length > 0;
 
   function handleDelete() {
@@ -120,6 +121,19 @@ export function GameDetailView({ id }: { id: string }) {
 
           <div className="mt-6 flex max-w-xs flex-col gap-2">
             <LibraryButton game={game} />
+            {libraryEntry && (
+              <select
+                value={libraryEntry.status}
+                onChange={(e) => updateEntry(game.id, { status: e.target.value as LibraryStatus })}
+                className="rounded border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200"
+              >
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            )}
             {isCustomGameId(game.id) && (
               <button
                 type="button"
