@@ -24,6 +24,7 @@ export function ExploreBrowser() {
   const sort: SortOption = parseSortParam(searchParams.get("sort"));
   const sourceParam = searchParams.get("source");
   const source: Source = VALID_SOURCES.includes(sourceParam as Source) ? (sourceParam as Source) : "base";
+  const includeMods = searchParams.get("includeMods") === "1";
   const hideInLibrary = searchParams.get("hideInLibrary") === "1";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
@@ -48,9 +49,10 @@ export function ExploreBrowser() {
         search,
         console: consoleFilter,
         sort,
+        includeMods,
         excludeIds: hideInLibrary ? libraryIds : undefined,
       }),
-    [sourceGames, search, consoleFilter, sort, hideInLibrary, libraryIds]
+    [sourceGames, search, consoleFilter, sort, includeMods, hideInLibrary, libraryIds]
   );
 
   const { items: results, count } = paginate(filtered, page, PAGE_SIZE);
@@ -85,6 +87,7 @@ export function ExploreBrowser() {
           currentConsole={consoleFilter}
           currentSort={sort}
           currentSource={source}
+          currentIncludeMods={includeMods}
           currentHideInLibrary={hideInLibrary}
         />
       </div>

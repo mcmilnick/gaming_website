@@ -55,6 +55,9 @@ export function addCustomGame(input: CustomGameInput): GameRecord {
     releasePAL: null,
     releaseYear: input.releaseYear,
     coverUrl: input.coverUrl,
+    // Not sourced from IGDB, so there's no mod/hack taxonomy to apply -
+    // always visible regardless of the "Include Homebrew/Mods/Hacks" filter.
+    isModOrHack: false,
   };
   store.writeAll([...games, game]);
   return game;

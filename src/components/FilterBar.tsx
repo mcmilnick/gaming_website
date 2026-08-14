@@ -10,6 +10,7 @@ type FilterBarProps = {
   currentConsole: string;
   currentSort: SortOption;
   currentSource: string;
+  currentIncludeMods: boolean;
   currentHideInLibrary: boolean;
 };
 
@@ -19,13 +20,14 @@ export function FilterBar({
   currentConsole,
   currentSort,
   currentSource,
+  currentIncludeMods,
   currentHideInLibrary,
 }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
   function navigate(
-    overrides: Partial<Record<"search" | "console" | "sort" | "source" | "hideInLibrary", string>>
+    overrides: Partial<Record<"search" | "console" | "sort" | "source" | "includeMods" | "hideInLibrary", string>>
   ) {
     const params = new URLSearchParams();
     const next = {
@@ -33,6 +35,7 @@ export function FilterBar({
       console: currentConsole,
       sort: currentSort,
       source: currentSource,
+      includeMods: currentIncludeMods ? "1" : "",
       hideInLibrary: currentHideInLibrary ? "1" : "",
       ...overrides,
     };
@@ -40,6 +43,7 @@ export function FilterBar({
     if (next.console) params.set("console", next.console);
     if (next.sort) params.set("sort", next.sort);
     if (next.source && next.source !== "base") params.set("source", next.source);
+    if (next.includeMods) params.set("includeMods", next.includeMods);
     if (next.hideInLibrary) params.set("hideInLibrary", next.hideInLibrary);
     router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
   }
@@ -67,14 +71,25 @@ export function FilterBar({
         <option value="all">Site Games + Mine</option>
       </select>
 
-      <label className="flex items-center gap-2 text-sm text-zinc-300">
-        <input
-          type="checkbox"
-          defaultChecked={currentHideInLibrary}
-          onChange={(e) => navigate({ hideInLibrary: e.target.checked ? "1" : "" })}
-        />
-        Hide games already in my library
-      </label>
+      <div className="flex flex-col gap-1.5">
+        <label className="flex items-center gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            defaultChecked={currentIncludeMods}
+            onChange={(e) => navigate({ includeMods: e.target.checked ? "1" : "" })}
+          />
+          Include Homebrew/Mods/Hacks
+        </label>
+
+        <label className="flex items-center gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            defaultChecked={currentHideInLibrary}
+            onChange={(e) => navigate({ hideInLibrary: e.target.checked ? "1" : "" })}
+          />
+          Hide games already in my library
+        </label>
+      </div>
     </div>
   );
 }

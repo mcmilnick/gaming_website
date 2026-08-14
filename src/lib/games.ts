@@ -20,13 +20,19 @@ export function getConsoles(): string[] {
 
 export type FilterAndSortOptions = CatalogFilters & {
   excludeIds?: ReadonlySet<string>;
+  // Mods/hacks are hidden by default (see GameRecord.isModOrHack) - pass
+  // true to include them.
+  includeMods?: boolean;
 };
 
 export function filterAndSortGames(games: GameRecord[], opts: FilterAndSortOptions): GameRecord[] {
-  const eligible =
-    opts.excludeIds && opts.excludeIds.size > 0
-      ? games.filter((game) => !opts.excludeIds!.has(game.id))
-      : games;
+  let eligible = games;
+  if (opts.excludeIds && opts.excludeIds.size > 0) {
+    eligible = eligible.filter((game) => !opts.excludeIds!.has(game.id));
+  }
+  if (!opts.includeMods) {
+    eligible = eligible.filter((game) => !game.isModOrHack);
+  }
   return filterAndSortByCatalog(eligible, opts);
 }
 

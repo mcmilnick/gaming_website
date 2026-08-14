@@ -127,7 +127,7 @@ async function fetchAllGamesForPlatform(accessToken, platform) {
 
   for (;;) {
     const body = [
-      "fields name, first_release_date, cover.image_id,",
+      "fields name, first_release_date, cover.image_id, game_type,",
       "involved_companies.company.name, involved_companies.developer, involved_companies.publisher;",
       `where platforms = (${platform.id});`,
       `limit ${PAGE_SIZE};`,
@@ -147,6 +147,14 @@ async function fetchAllGamesForPlatform(accessToken, platform) {
   return games;
 }
 
+// IGDB game_type values (from the game_types endpoint): 5 = Mod, 12 = Fork.
+// Both cover ROM hacks / fan-made derivative works like "Pokemon Fused
+// Dimensions". This does NOT catch original homebrew (a new game not based
+// on an existing one, e.g. a from-scratch indie GBC game) - IGDB tags those
+// as game_type 0 (Main Game), same as official releases, so there's no
+// field to distinguish that case. parent_game is deliberately not used here.
+const DERIVATIVE_GAME_TYPES = new Set([5, 12]);
+
 function mapGame(igdbGame, platformName) {
   const involved = igdbGame.involved_companies || [];
   const developer = involved.find((c) => c.developer)?.company?.name ?? null;
@@ -157,6 +165,7 @@ function mapGame(igdbGame, platformName) {
   const coverUrl = igdbGame.cover?.image_id
     ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${igdbGame.cover.image_id}.jpg`
     : null;
+  const isModOrHack = DERIVATIVE_GAME_TYPES.has(igdbGame.game_type);
 
   return {
     id: `igdb-${igdbGame.id}-${slugify(platformName)}`,
@@ -172,6 +181,7 @@ function mapGame(igdbGame, platformName) {
     releasePAL: null,
     releaseYear,
     coverUrl,
+    isModOrHack,
   };
 }
 
