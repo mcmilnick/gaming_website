@@ -13,6 +13,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { LibraryButton } from "@/components/LibraryButton";
 import { CopyListTagsButton } from "@/components/CopyListTagsButton";
 import { AddToListSelect } from "@/components/AddToListSelect";
+import { NotesEditor } from "@/components/NotesEditor";
 
 function regions(game: { releaseJapan: string | null; releaseNA: string | null; releasePAL: string | null }) {
   return [
@@ -174,6 +175,15 @@ export function GameDetailView({ id }: { id: string }) {
                   <AddToListSelect gameId={game.id} />
                 </div>
               )}
+            </div>
+          )}
+
+          {libraryEntry && (
+            <div className="mt-4">
+              <p className="text-xs text-zinc-500">Notes</p>
+              <div className="mt-1">
+                <NotesEditor key={libraryEntry.notes} gameId={game.id} notes={libraryEntry.notes} />
+              </div>
             </div>
           )}
         </div>
