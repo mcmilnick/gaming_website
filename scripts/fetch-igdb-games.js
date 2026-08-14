@@ -61,6 +61,9 @@ const TARGET_PLATFORM_NAMES = [
   "3DO Interactive Multiplayer",
   "DOS",
   "Dreamcast",
+  "PlayStation 2",
+  "Wii",
+  "Wii U",
 ];
 
 const OUTPUT_PATH = path.join(__dirname, "..", "src", "data", "games.json");
