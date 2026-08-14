@@ -1,5 +1,20 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Instructions to run
+
+You need Node.js (the LTS version)
+
+Then execute:
+
+```bash
+git clone https://github.com/mcmilnick/gaming_website.git
+cd gaming_website
+npm install
+npm run dev
+```
+
+Then open [http://localhost:3000](http://localhost:3000) in a browser.
+
 ## TODO
 
 - **Decide on adding a database and rescanning games on a cadence.** Right now the catalog is a static JSON file (`src/data/games.json`) fetched from IGDB via `scripts/fetch-igdb-games.js` and re-run manually. IGDB supports incremental sync via webhooks (push updates) rather than polling, which would fit a future "pull down + store in a real database + periodic sweep" setup. No backend exists yet by design.
