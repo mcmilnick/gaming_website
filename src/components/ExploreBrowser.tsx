@@ -3,12 +3,13 @@
 import { useMemo } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ALL_GAMES, PAGE_SIZE, filterAndSortGames, getConsoles, paginate } from "@/lib/games";
-import { parseSortParam, type SortOption } from "@/lib/catalogSearch";
+import { parseSortParam, SORT_OPTIONS, type SortOption } from "@/lib/catalogSearch";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { GameCard } from "./GameCard";
 import { FilterBar } from "./FilterBar";
 import { Pagination } from "./Pagination";
+import { Panel } from "./Panel";
 
 const VALID_SOURCES = ["base", "custom", "all"] as const;
 type Source = (typeof VALID_SOURCES)[number];
@@ -26,9 +27,14 @@ export function ExploreBrowser() {
   const source: Source = VALID_SOURCES.includes(sourceParam as Source) ? (sourceParam as Source) : "base";
   const includeMods = searchParams.get("includeMods") === "1";
   const hideInLibrary = searchParams.get("hideInLibrary") === "1";
+  const statusFilter = searchParams.get("status") ?? "";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
   const libraryIds = useMemo(() => new Set(entries.map((entry) => entry.id)), [entries]);
+  const libraryStatusById = useMemo(
+    () => new Map(entries.map((entry) => [entry.id, entry.status])),
+    [entries]
+  );
   const consoles = useMemo(() => getConsoles(), []);
 
   const sourceGames = useMemo(() => {
@@ -43,17 +49,19 @@ export function ExploreBrowser() {
     }
   }, [source, customGames]);
 
-  const filtered = useMemo(
-    () =>
-      filterAndSortGames(sourceGames, {
-        search,
-        console: consoleFilter,
-        sort,
-        includeMods,
-        excludeIds: hideInLibrary ? libraryIds : undefined,
-      }),
-    [sourceGames, search, consoleFilter, sort, includeMods, hideInLibrary, libraryIds]
-  );
+  const filtered = useMemo(() => {
+    const base = filterAndSortGames(sourceGames, {
+      search,
+      console: consoleFilter,
+      sort,
+      includeMods,
+      excludeIds: hideInLibrary ? libraryIds : undefined,
+    });
+    // Status only exists on games that are in the library, so filtering by
+    // it naturally narrows down to library games matching that status.
+    if (!statusFilter) return base;
+    return base.filter((game) => libraryStatusById.get(game.id) === statusFilter);
+  }, [sourceGames, search, consoleFilter, sort, includeMods, hideInLibrary, libraryIds, statusFilter, libraryStatusById]);
 
   const { items: results, count } = paginate(filtered, page, PAGE_SIZE);
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
@@ -80,17 +88,19 @@ export function ExploreBrowser() {
         plus anything you&apos;ve added yourself
       </p>
 
-      <div className="mt-6">
+      <Panel className="mt-6">
         <FilterBar
           consoles={consoles}
           currentSearch={search}
           currentConsole={consoleFilter}
           currentSort={sort}
+          sortOptions={SORT_OPTIONS}
           currentSource={source}
           currentIncludeMods={includeMods}
+          currentStatus={statusFilter}
           currentHideInLibrary={hideInLibrary}
         />
-      </div>
+      </Panel>
 
       {results.length === 0 ? (
         <p className="mt-12 text-center text-zinc-500">No games matched your filters.</p>

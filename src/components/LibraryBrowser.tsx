@@ -4,10 +4,16 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLibrary } from "@/hooks/useLibrary";
-import { parseLibrarySortParam, isRatingSort, sortByRating } from "@/lib/library";
+import { parseLibrarySortParam, isRatingSort, sortByRating, LIBRARY_SORT_OPTIONS } from "@/lib/library";
 import { filterAndSortByCatalog, getDistinctConsoles } from "@/lib/catalogSearch";
-import { LibraryFilterBar } from "@/components/LibraryFilterBar";
+import { getGameById } from "@/lib/games";
+import { isCustomGameId } from "@/lib/customGames";
+import { FilterBar } from "@/components/FilterBar";
 import { LibraryEntryRow } from "@/components/LibraryEntryRow";
+import { Panel } from "@/components/Panel";
+
+const VALID_SOURCES = ["base", "custom", "all"] as const;
+type Source = (typeof VALID_SOURCES)[number];
 
 export function LibraryBrowser() {
   const { entries, hydrated } = useLibrary();
@@ -17,19 +23,27 @@ export function LibraryBrowser() {
   const consoleFilter = searchParams.get("console") ?? "";
   const sort = parseLibrarySortParam(searchParams.get("sort"));
   const statusFilter = searchParams.get("status") ?? "";
+  const sourceParam = searchParams.get("source");
+  // Unlike Explore, "all" is the default here - nothing in your own library
+  // should disappear on first load just because a filter exists.
+  const source: Source = VALID_SOURCES.includes(sourceParam as Source) ? (sourceParam as Source) : "all";
+  const includeMods = searchParams.get("includeMods") === "1";
 
   const consoles = useMemo(() => getDistinctConsoles(entries), [entries]);
 
   const filtered = useMemo(() => {
-    const statusFiltered = statusFilter
-      ? entries.filter((entry) => entry.status === statusFilter)
-      : entries;
+    let eligible = statusFilter ? entries.filter((entry) => entry.status === statusFilter) : entries;
+    if (source === "base") eligible = eligible.filter((entry) => !isCustomGameId(entry.id));
+    else if (source === "custom") eligible = eligible.filter((entry) => isCustomGameId(entry.id));
+    if (!includeMods) {
+      eligible = eligible.filter((entry) => !getGameById(entry.id)?.isModOrHack);
+    }
     if (isRatingSort(sort)) {
-      const searched = filterAndSortByCatalog(statusFiltered, { search, console: consoleFilter });
+      const searched = filterAndSortByCatalog(eligible, { search, console: consoleFilter });
       return sortByRating(searched, sort);
     }
-    return filterAndSortByCatalog(statusFiltered, { search, console: consoleFilter, sort });
-  }, [entries, statusFilter, search, consoleFilter, sort]);
+    return filterAndSortByCatalog(eligible, { search, console: consoleFilter, sort });
+  }, [entries, statusFilter, source, includeMods, search, consoleFilter, sort]);
 
   if (!hydrated) {
     return <div className="mx-auto max-w-6xl px-4 py-8 text-zinc-500">Loading your library…</div>;
@@ -68,15 +82,18 @@ export function LibraryBrowser() {
         .
       </p>
 
-      <div className="mt-6">
-        <LibraryFilterBar
+      <Panel className="mt-6">
+        <FilterBar
           consoles={consoles}
           currentSearch={search}
           currentConsole={consoleFilter}
           currentSort={sort}
+          sortOptions={LIBRARY_SORT_OPTIONS}
+          currentSource={source}
+          currentIncludeMods={includeMods}
           currentStatus={statusFilter}
         />
-      </div>
+      </Panel>
 
       {filtered.length === 0 ? (
         <p className="mt-12 text-center text-zinc-500">No library entries matched your filters.</p>

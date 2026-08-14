@@ -1,0 +1,11 @@
+
+> gaming_website@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.0 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.4.32:3000
+- Environments: .env.local
+✓ Ready in 500ms
+✓ Running next.config.ts took 37ms
+

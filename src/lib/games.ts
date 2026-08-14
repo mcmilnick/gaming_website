@@ -6,12 +6,14 @@ import { filterAndSortByCatalog, getDistinctConsoles, type CatalogFilters } from
 // own `console`, since the dataset spans multiple platforms.
 export const ALL_GAMES: GameRecord[] = rawGames as GameRecord[];
 
+const GAME_BY_ID = new Map(ALL_GAMES.map((game) => [game.id, game]));
+
 export const PAGE_SIZE = 24;
 
 export type { SortOption } from "./catalogSearch";
 
 export function getGameById(id: string): GameRecord | undefined {
-  return ALL_GAMES.find((game) => game.id === id);
+  return GAME_BY_ID.get(id);
 }
 
 export function getConsoles(): string[] {
