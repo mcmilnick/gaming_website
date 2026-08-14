@@ -56,6 +56,8 @@ const TARGET_PLATFORM_NAMES = [
   "Neo Geo CD",
   "Neo Geo Pocket",
   "Neo Geo Pocket Color",
+  "Virtual Boy",
+  "Xbox",
 ];
 
 const OUTPUT_PATH = path.join(__dirname, "..", "src", "data", "games.json");

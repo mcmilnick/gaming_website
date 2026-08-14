@@ -11,6 +11,7 @@ export type CustomGameInput = {
   developer: string | null;
   publisher: string | null;
   releaseYear: number | null;
+  coverUrl: string | null;
 };
 
 const store = createLocalStore<GameRecord>("retroexplore:customGames:v1", "retroexplore:customGames:change");
@@ -53,7 +54,7 @@ export function addCustomGame(input: CustomGameInput): GameRecord {
     releaseNA: null,
     releasePAL: null,
     releaseYear: input.releaseYear,
-    coverUrl: null,
+    coverUrl: input.coverUrl,
   };
   store.writeAll([...games, game]);
   return game;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ALL_GAMES } from "@/lib/games";
 import { addCustomGame, removeCustomGame } from "@/lib/customGames";
@@ -17,6 +18,7 @@ const EMPTY_FORM = {
   developer: "",
   publisher: "",
   releaseYear: "",
+  coverUrl: "",
 };
 
 export default function AddGamesPage() {
@@ -24,6 +26,7 @@ export default function AddGamesPage() {
   const { lists } = useLists();
   const [form, setForm] = useState(EMPTY_FORM);
   const [copyQuery, setCopyQuery] = useState("");
+  const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
 
   const combinedGames = useMemo(() => [...ALL_GAMES, ...games], [games]);
   const copyResults = useMemo(() => {
@@ -39,8 +42,10 @@ export default function AddGamesPage() {
       developer: game.developer ?? "",
       publisher: game.publisher ?? "",
       releaseYear: game.releaseYear !== null ? String(game.releaseYear) : "",
+      coverUrl: game.coverUrl ?? "",
     });
     setCopyQuery("");
+    setCoverPreviewFailed(false);
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -55,9 +60,11 @@ export default function AddGamesPage() {
       developer: form.developer.trim() || null,
       publisher: form.publisher.trim() || null,
       releaseYear: parsedYear !== null && Number.isFinite(parsedYear) ? parsedYear : null,
+      coverUrl: form.coverUrl.trim() || null,
     });
     setForm(EMPTY_FORM);
     setCopyQuery("");
+    setCoverPreviewFailed(false);
   }
 
   function handleRemove(gameId: string) {
@@ -180,6 +187,43 @@ export default function AddGamesPage() {
               onChange={(e) => setForm((f) => ({ ...f, publisher: e.target.value }))}
               className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-600 focus:outline-none"
             />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-zinc-400" htmlFor="coverUrl">
+            Cover image URL
+          </label>
+          <p className="mt-1 text-xs text-zinc-500">
+            Go to the page, right-click the image, copy the image link. Not the page itself.
+          </p>
+          <div className="mt-1 flex items-start gap-3">
+            <input
+              id="coverUrl"
+              type="url"
+              value={form.coverUrl}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, coverUrl: e.target.value }));
+                setCoverPreviewFailed(false);
+              }}
+              placeholder="https://..."
+              className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-600 focus:outline-none"
+            />
+            <div className="relative flex h-16 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded border border-zinc-700 bg-zinc-950">
+              {form.coverUrl.trim() && !coverPreviewFailed ? (
+                <Image
+                  key={form.coverUrl.trim()}
+                  src={form.coverUrl.trim()}
+                  alt="Cover preview"
+                  fill
+                  className="object-cover"
+                  sizes="48px"
+                  onError={() => setCoverPreviewFailed(true)}
+                />
+              ) : (
+                <span className="text-[10px] text-zinc-600">Preview</span>
+              )}
+            </div>
           </div>
         </div>
 
