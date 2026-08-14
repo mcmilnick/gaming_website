@@ -24,8 +24,9 @@ Then open [http://localhost:3000](http://localhost:3000) in a browser.
 - **Consider a "date added" sort** - for the Library and/or My Lists (`addedAt` is already tracked on both `LibraryEntry` and `ListEntry`, just not exposed as a sort option yet).
 - **Overhaul the visual design** - backgrounds and button aesthetics are still the plain first-pass styling from early in the build.
 - **Consider live/on-blur search instead of requiring Enter.** The search box (`CatalogFilterFields`, shared by Explore and Library) is a `<form onSubmit>` today - only fires on Enter/submit. Debounced-as-you-type or search-on-blur would feel more responsive; since it's the shared component, fixing it once covers both pages.
-- **Add a standard page-framing template.** Right now each tab (Explore, Library, My Lists, Add Game, Backup) builds its own layout ad hoc - no shared frame for where content boxes/sections sit. A consistent template carried across tabs would give clearer visual delineation between pages and page regions, and double as the foundation for the visual-design overhaul above.
 - **Split `src/data/games.json` into a file per console** (currently one ~34k-game combined file, all bundled into the client on every load - see the bundle-size notes elsewhere in this history) to make the data more manageable, and consider loading/caching each console's file individually rather than shipping the whole catalog upfront. Would work well on the main Explore page (filter by console first, load only that file). Harder in My Lists, where entries can span any console and there's no single console to key a load on. Need to actually measure performance before committing to an approach, not just assume.
+- **Add multi language character selector** Some way to jump to a letter instead of jump
+to page, but needs to be multi language as in need to handle kanji.
 
 ## Getting Started
 

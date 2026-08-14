@@ -21,3 +21,6 @@
  GET /library 200 in 36ms (next.js: 9ms, application-code: 26ms)
 ✓ Compiled in 115ms
  GET /library 200 in 57ms (next.js: 17ms, application-code: 40ms)
+ GET /lists 200 in 31ms (next.js: 7ms, application-code: 24ms)
+ GET /backup 200 in 71ms (next.js: 42ms, application-code: 28ms)
+ GET / 200 in 29ms (next.js: 7ms, application-code: 22ms)
