@@ -58,6 +58,7 @@ const TARGET_PLATFORM_NAMES = [
   "Neo Geo Pocket Color",
   "Virtual Boy",
   "Xbox",
+  "3DO Interactive Multiplayer",
 ];
 
 const OUTPUT_PATH = path.join(__dirname, "..", "src", "data", "games.json");
