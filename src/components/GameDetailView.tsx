@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getGameById } from "@/lib/games";
+import { useGames } from "@/hooks/useGames";
 import { isCustomGameId, removeCustomGame } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { useLists } from "@/hooks/useLists";
@@ -24,8 +24,9 @@ function regions(game: { releaseJapan: string | null; releaseNA: string | null; 
 }
 
 export function GameDetailView({ id }: { id: string }) {
-  const baseGame = getGameById(id);
-  const { games: customGames, hydrated } = useCustomGames();
+  const { gamesById, hydrated: gamesHydrated } = useGames();
+  const baseGame = gamesById.get(id);
+  const { games: customGames, hydrated: customGamesHydrated } = useCustomGames();
   const { lists } = useLists();
   const { entries: libraryEntries } = useLibrary();
   const router = useRouter();
@@ -54,7 +55,7 @@ export function GameDetailView({ id }: { id: string }) {
   }
 
   if (!game) {
-    if (!hydrated) {
+    if (!customGamesHydrated || !gamesHydrated) {
       return <div className="mx-auto max-w-4xl px-4 py-8 text-zinc-500">Loading…</div>;
     }
     return (

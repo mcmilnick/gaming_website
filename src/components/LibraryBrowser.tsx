@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useLibrary } from "@/hooks/useLibrary";
 import { parseLibrarySortParam, isRatingSort, sortByRating, LIBRARY_SORT_OPTIONS } from "@/lib/library";
 import { filterAndSortByCatalog, getDistinctConsoles } from "@/lib/catalogSearch";
-import { getGameById } from "@/lib/games";
+import { useGames } from "@/hooks/useGames";
 import { isCustomGameId } from "@/lib/customGames";
 import { FilterBar } from "@/components/FilterBar";
 import { LibraryEntryRow } from "@/components/LibraryEntryRow";
@@ -17,6 +17,7 @@ type Source = (typeof VALID_SOURCES)[number];
 
 export function LibraryBrowser() {
   const { entries, hydrated } = useLibrary();
+  const { gamesById, hydrated: gamesHydrated } = useGames();
   const searchParams = useSearchParams();
 
   const search = searchParams.get("search") ?? "";
@@ -36,16 +37,16 @@ export function LibraryBrowser() {
     if (source === "base") eligible = eligible.filter((entry) => !isCustomGameId(entry.id));
     else if (source === "custom") eligible = eligible.filter((entry) => isCustomGameId(entry.id));
     if (!includeMods) {
-      eligible = eligible.filter((entry) => !getGameById(entry.id)?.isModOrHack);
+      eligible = eligible.filter((entry) => !gamesById.get(entry.id)?.isModOrHack);
     }
     if (isRatingSort(sort)) {
       const searched = filterAndSortByCatalog(eligible, { search, console: consoleFilter });
       return sortByRating(searched, sort);
     }
     return filterAndSortByCatalog(eligible, { search, console: consoleFilter, sort });
-  }, [entries, statusFilter, source, includeMods, search, consoleFilter, sort]);
+  }, [entries, statusFilter, source, includeMods, search, consoleFilter, sort, gamesById]);
 
-  if (!hydrated) {
+  if (!hydrated || !gamesHydrated) {
     return <div className="mx-auto max-w-6xl px-4 py-8 text-zinc-500">Loading your library…</div>;
   }
 

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useLists } from "@/hooks/useLists";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useCustomGames } from "@/hooks/useCustomGames";
-import { ALL_GAMES } from "@/lib/games";
+import { useGames } from "@/hooks/useGames";
 import {
   addEntryToList,
   deleteList,
@@ -28,6 +28,7 @@ export function ListDetailView({ id }: { id: string }) {
   const { lists, hydrated } = useLists();
   const { entries: libraryEntries } = useLibrary();
   const { games: customGames } = useCustomGames();
+  const { games: catalogGames, hydrated: gamesHydrated } = useGames();
   const router = useRouter();
   const [addQuery, setAddQuery] = useState("");
   const [nameDraft, setNameDraft] = useState<string | null>(null);
@@ -46,10 +47,10 @@ export function ListDetailView({ id }: { id: string }) {
   // get cover art (Library snapshots don't carry it).
   const catalogById = useMemo(() => {
     const map = new Map<string, GameRecord>();
-    for (const game of ALL_GAMES) map.set(game.id, game);
+    for (const game of catalogGames) map.set(game.id, game);
     for (const game of customGames) map.set(game.id, game);
     return map;
-  }, [customGames]);
+  }, [catalogGames, customGames]);
 
   const displayedEntries = useMemo(() => {
     if (!list) return [];
@@ -65,7 +66,7 @@ export function ListDetailView({ id }: { id: string }) {
       .slice(0, 8);
   }, [addQuery, libraryEntries, list]);
 
-  if (!hydrated) {
+  if (!hydrated || !gamesHydrated) {
     return <div className="mx-auto max-w-2xl px-4 py-8 text-zinc-500">Loading…</div>;
   }
 

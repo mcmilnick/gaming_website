@@ -1,0 +1,103 @@
+@startuml Any Stat Gaming - Architecture
+
+title Any Stat Gaming — 10,000-Foot Architecture\n(no backend, no login, no database)
+
+skinparam componentStyle rectangle
+skinparam wrapWidth 200
+skinparam maxMessageSize 200
+
+package "Maintainer-side (manual, offline)" {
+  [IGDB API] as IGDB
+  [scripts/fetch-igdb-games.js] as FetchScript
+}
+
+database "public/games.json\n(~77k games, one static file)" as CatalogFile
+
+IGDB --> FetchScript : Twitch OAuth\n+ game queries
+FetchScript --> CatalogFile : writes\n(npm run fetch-games, manual)
+
+package "Browser (per visitor)" {
+
+  package "Catalog access" {
+    [gamesStore.ts] as GamesStore
+    [useGames()] as UseGames
+    GamesStore --> UseGames
+  }
+
+  package "Your personal data" {
+    database "localStorage" as LS
+    [library.ts] as LibLib
+    [customGames.ts] as CustomLib
+    [lists.ts] as ListsLib
+    [useLibrary()] as UseLibrary
+    [useCustomGames()] as UseCustomGames
+    [useLists()] as UseLists
+
+    LibLib --> LS
+    CustomLib --> LS
+    ListsLib --> LS
+    LibLib --> UseLibrary
+    CustomLib --> UseCustomGames
+    ListsLib --> UseLists
+  }
+
+  package "Shared building blocks" {
+    [catalogSearch.ts] as CatalogSearch
+    [FilterBar + Panel] as FilterBarPanel
+    [NotesEditor.tsx] as NotesEditor
+  }
+
+  package "Pages (all client-rendered)" {
+    [All Games\n"/"] as PageExplore
+    [My Library\n"/library"] as PageLibrary
+    [Game Detail\n"/game/{id}"] as PageDetail
+    [My Lists\n"/lists"] as PageLists
+    [List Detail\n"/lists/{id}"] as PageListDetail
+    [Add Game\n"/add-games"] as PageAdd
+  }
+}
+
+CatalogFile --> GamesStore : fetch("/games.json")\ncached once per session
+
+UseGames --> PageExplore
+UseGames --> PageLibrary
+UseGames --> PageDetail
+UseGames --> PageListDetail
+UseGames --> PageAdd
+
+UseLibrary --> PageExplore
+UseLibrary --> PageLibrary
+UseLibrary --> PageDetail
+UseLibrary --> PageListDetail
+
+UseCustomGames --> PageDetail
+UseCustomGames --> PageAdd
+UseCustomGames --> PageListDetail
+
+UseLists --> PageDetail
+UseLists --> PageLists
+UseLists --> PageListDetail
+
+CatalogSearch --> PageExplore
+CatalogSearch --> PageLibrary
+
+FilterBarPanel --> PageExplore
+FilterBarPanel --> PageLibrary
+
+NotesEditor --> PageLibrary
+NotesEditor --> PageDetail
+
+note right of CatalogFile
+  Cache-Control:
+  max-age=86400,
+  stale-while-revalidate=604800
+  (next.config.ts)
+end note
+
+note bottom of LS
+  Never leaves the browser.
+  No account, no server call.
+  Cleared if site data is cleared.
+end note
+
+@enduml

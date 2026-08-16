@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ALL_GAMES } from "@/lib/games";
+import { useGames } from "@/hooks/useGames";
 import { addCustomGame, removeCustomGame } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { useLists } from "@/hooks/useLists";
@@ -23,12 +23,13 @@ const EMPTY_FORM = {
 
 export default function AddGamesPage() {
   const { games, hydrated } = useCustomGames();
+  const { games: catalogGames } = useGames();
   const { lists } = useLists();
   const [form, setForm] = useState(EMPTY_FORM);
   const [copyQuery, setCopyQuery] = useState("");
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
 
-  const combinedGames = useMemo(() => [...ALL_GAMES, ...games], [games]);
+  const combinedGames = useMemo(() => [...catalogGames, ...games], [catalogGames, games]);
   const copyResults = useMemo(() => {
     const query = normalizeForSearch(copyQuery.trim());
     if (!query) return [];

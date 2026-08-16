@@ -1,5 +1,5 @@
 // Fetches games for a set of platforms from IGDB and writes them to
-// src/data/games.json, replacing whatever is there.
+// public/games.json, replacing whatever is there.
 //
 // Requires IGDB_CLIENT_ID and IGDB_CLIENT_SECRET (from a Twitch Developer
 // app: https://dev.twitch.tv/console/apps). Run with:
@@ -64,9 +64,10 @@ const TARGET_PLATFORM_NAMES = [
   "PlayStation 2",
   "Wii",
   "Wii U",
+  "Nintendo Switch",
 ];
 
-const OUTPUT_PATH = path.join(__dirname, "..", "src", "data", "games.json");
+const OUTPUT_PATH = path.join(__dirname, "..", "public", "games.json");
 const PAGE_SIZE = 500;
 const REQUEST_DELAY_MS = 300;
 

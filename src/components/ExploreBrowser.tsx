@@ -2,10 +2,11 @@
 
 import { useMemo } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ALL_GAMES, PAGE_SIZE, filterAndSortGames, getConsoles, paginate } from "@/lib/games";
-import { parseSortParam, SORT_OPTIONS, type SortOption } from "@/lib/catalogSearch";
+import { PAGE_SIZE, filterAndSortGames, paginate } from "@/lib/games";
+import { parseSortParam, getDistinctConsoles, SORT_OPTIONS, type SortOption } from "@/lib/catalogSearch";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useCustomGames } from "@/hooks/useCustomGames";
+import { useGames } from "@/hooks/useGames";
 import { GameCard } from "./GameCard";
 import { FilterBar } from "./FilterBar";
 import { Pagination } from "./Pagination";
@@ -19,6 +20,7 @@ export function ExploreBrowser() {
   const pathname = usePathname();
   const { entries } = useLibrary();
   const { games: customGames } = useCustomGames();
+  const { games: allGames, hydrated: gamesHydrated } = useGames();
 
   const search = searchParams.get("search") ?? "";
   const consoleFilter = searchParams.get("console") ?? "";
@@ -35,19 +37,19 @@ export function ExploreBrowser() {
     () => new Map(entries.map((entry) => [entry.id, entry.status])),
     [entries]
   );
-  const consoles = useMemo(() => getConsoles(), []);
+  const consoles = useMemo(() => getDistinctConsoles(allGames), [allGames]);
 
   const sourceGames = useMemo(() => {
     switch (source) {
       case "custom":
         return customGames;
       case "all":
-        return [...ALL_GAMES, ...customGames];
+        return [...allGames, ...customGames];
       case "base":
       default:
-        return ALL_GAMES;
+        return allGames;
     }
-  }, [source, customGames]);
+  }, [source, customGames, allGames]);
 
   const filtered = useMemo(() => {
     const base = filterAndSortGames(sourceGames, {
@@ -70,6 +72,10 @@ export function ExploreBrowser() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(targetPage));
     return `${pathname}?${params.toString()}`;
+  }
+
+  if (!gamesHydrated) {
+    return <div className="mx-auto max-w-6xl px-4 py-8 text-zinc-500">Loading games…</div>;
   }
 
   return (

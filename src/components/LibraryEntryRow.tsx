@@ -5,7 +5,7 @@ import Link from "next/link";
 import { removeFromLibrary, updateEntry, STATUS_LABELS, type LibraryEntry, type LibraryStatus } from "@/lib/library";
 import { useLists } from "@/hooks/useLists";
 import { useCustomGames } from "@/hooks/useCustomGames";
-import { getGameById } from "@/lib/games";
+import { useGames } from "@/hooks/useGames";
 import { removeEntryFromList, type GameList, type ListEntry } from "@/lib/lists";
 import { RatingStars } from "@/components/RatingStars";
 import { CopyListTagsButton } from "@/components/CopyListTagsButton";
@@ -18,10 +18,11 @@ import { NotesEditor } from "@/components/NotesEditor";
 export function LibraryEntryRow({ entry }: { entry: LibraryEntry }) {
   const { lists } = useLists();
   const { games: customGames } = useCustomGames();
+  const { gamesById } = useGames();
 
   // Library entries only store a lightweight snapshot (no cover image), so
   // resolve the live catalog record to get artwork if it's still around.
-  const catalogGame = getGameById(entry.id) ?? customGames.find((game) => game.id === entry.id);
+  const catalogGame = gamesById.get(entry.id) ?? customGames.find((game) => game.id === entry.id);
   const coverUrl = catalogGame?.coverUrl ?? null;
 
   const memberships = lists
