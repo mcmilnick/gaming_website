@@ -23,6 +23,7 @@ export type CatalogSearchable = {
   console?: string | null;
   publisher: string | null;
   releaseYear: number | null;
+  releaseMonth?: number | null;
 };
 
 export type CatalogFilters = {
@@ -62,14 +63,34 @@ export function filterAndSortByCatalog<T extends CatalogSearchable>(items: T[], 
       case "publisher":
         return (a.publisher ?? "").localeCompare(b.publisher ?? "");
       case "releaseYear":
-        return (a.releaseYear ?? 9999) - (b.releaseYear ?? 9999);
+        return (releaseSortValue(a) ?? Infinity) - (releaseSortValue(b) ?? Infinity);
       case "-releaseYear":
-        return (b.releaseYear ?? -9999) - (a.releaseYear ?? -9999);
+        return (releaseSortValue(b) ?? -Infinity) - (releaseSortValue(a) ?? -Infinity);
       case "title":
       default:
         return a.title.localeCompare(b.title);
     }
   });
+}
+
+// A single comparable number for year+month, so "Release date" sorts by
+// month within a year instead of just year. A missing year sorts to the very
+// end either direction (Infinity/-Infinity above). A known year with no
+// known month defaults to month 1 - i.e. it sorts as the oldest entry within
+// its own year, regardless of sort direction.
+function releaseSortValue(item: { releaseYear: number | null; releaseMonth?: number | null }): number | null {
+  return item.releaseYear === null ? null : item.releaseYear * 100 + (item.releaseMonth ?? 1);
+}
+
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "Sep 2020" when the month is actually known, "2020" when it's year-only,
+// null when there's no release date at all - one place so every game/entry
+// display formats it the same way.
+export function formatReleaseDate(year: number | null, month?: number | null): string | null {
+  if (year === null) return null;
+  if (month && month >= 1 && month <= 12) return `${MONTH_ABBR[month - 1]} ${year}`;
+  return String(year);
 }
 
 export function getDistinctConsoles<T extends { console?: string | null }>(items: T[]): string[] {

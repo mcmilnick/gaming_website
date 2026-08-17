@@ -54,6 +54,8 @@ export function addCustomGame(input: CustomGameInput): GameRecord {
     releaseNA: null,
     releasePAL: null,
     releaseYear: input.releaseYear,
+    // The Add Game form only asks for a year, not a month.
+    releaseMonth: null,
     coverUrl: input.coverUrl,
     // Not sourced from IGDB, so there's no mod/hack taxonomy to apply -
     // always visible regardless of the "Include Homebrew/Mods/Hacks" filter.

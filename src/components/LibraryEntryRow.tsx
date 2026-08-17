@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { removeFromLibrary, updateEntry, STATUS_LABELS, type LibraryEntry, type LibraryStatus } from "@/lib/library";
+import { formatReleaseDate } from "@/lib/catalogSearch";
 import { useLists } from "@/hooks/useLists";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { useGames } from "@/hooks/useGames";
@@ -24,6 +25,7 @@ export function LibraryEntryRow({ entry }: { entry: LibraryEntry }) {
   // resolve the live catalog record to get artwork if it's still around.
   const catalogGame = gamesById.get(entry.id) ?? customGames.find((game) => game.id === entry.id);
   const coverUrl = catalogGame?.coverUrl ?? null;
+  const releaseDate = formatReleaseDate(entry.releaseYear, entry.releaseMonth);
 
   const memberships = lists
     .map((list) => ({ list, listEntry: list.entries.find((e) => e.gameId === entry.id) }))
@@ -51,7 +53,7 @@ export function LibraryEntryRow({ entry }: { entry: LibraryEntry }) {
             <p className="text-xs text-zinc-500">
               {entry.console ? `${entry.console} · ` : ""}
               {entry.publisher ?? "Unknown publisher"}
-              {entry.releaseYear ? ` · ${entry.releaseYear}` : ""}
+              {releaseDate ? ` · ${releaseDate}` : ""}
             </p>
           </div>
           <button

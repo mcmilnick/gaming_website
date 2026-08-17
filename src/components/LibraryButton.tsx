@@ -26,6 +26,7 @@ export function LibraryButton({ game }: { game: GameRecord }) {
         developer: game.developer,
         publisher: game.publisher,
         releaseYear: game.releaseYear,
+        releaseMonth: game.releaseMonth,
       });
     }
   }

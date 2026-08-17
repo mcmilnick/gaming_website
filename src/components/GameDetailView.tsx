@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useGames } from "@/hooks/useGames";
+import { formatReleaseDate } from "@/lib/catalogSearch";
 import { isCustomGameId, removeCustomGame } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { useLists } from "@/hooks/useLists";
@@ -115,8 +116,8 @@ export function GameDetailView({ id }: { id: string }) {
               ))
             ) : (
               <div>
-                <dt className="text-zinc-500">Release year</dt>
-                <dd className="text-zinc-200">{game.releaseYear ?? "—"}</dd>
+                <dt className="text-zinc-500">Release date</dt>
+                <dd className="text-zinc-200">{formatReleaseDate(game.releaseYear, game.releaseMonth) ?? "—"}</dd>
               </div>
             )}
           </dl>

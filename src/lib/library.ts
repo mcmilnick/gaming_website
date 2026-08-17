@@ -21,6 +21,7 @@ export type LibraryEntry = {
   developer: string | null;
   publisher: string | null;
   releaseYear: number | null;
+  releaseMonth: number | null;
   status: LibraryStatus;
   userRating: number | null;
   notes: string;
@@ -30,7 +31,7 @@ export type LibraryEntry = {
 
 export type LibraryEntryInput = Pick<
   LibraryEntry,
-  "id" | "title" | "console" | "developer" | "publisher" | "releaseYear"
+  "id" | "title" | "console" | "developer" | "publisher" | "releaseYear" | "releaseMonth"
 >;
 
 const store = createLocalStore<LibraryEntry>(
@@ -38,7 +39,9 @@ const store = createLocalStore<LibraryEntry>(
   "retroexplore:library:change",
   // Entries saved before `console` was tracked on the Library don't have it -
   // every base title at the time was Game Boy, so that's a safe backfill.
-  (entry) => ({ ...entry, console: entry.console ?? "Game Boy" })
+  // Entries saved before `releaseMonth` existed just don't have it - null
+  // (year-only) is the correct read for those regardless.
+  (entry) => ({ ...entry, console: entry.console ?? "Game Boy", releaseMonth: entry.releaseMonth ?? null })
 );
 
 export function getLibrary(): LibraryEntry[] {
@@ -83,15 +86,19 @@ export function updateEntry(
   store.writeAll(next);
 }
 
-// The Library adds a sort dimension the base catalog doesn't have (your own
-// rating), layered on top of the shared search/console/sort core rather than
-// forking it.
-export type LibrarySortOption = SortOption | "rating" | "-rating";
+// The Library adds sort dimensions the base catalog doesn't have (your own
+// rating, when you added it), layered on top of the shared search/console/sort
+// core rather than forking it. Both are Library-only - the base catalog has
+// no "added" or "rating" concept, since those are about your relationship to
+// the game, not the game itself.
+export type LibrarySortOption = SortOption | "rating" | "-rating" | "addedAt" | "-addedAt";
 
 export const LIBRARY_SORT_OPTIONS: { value: LibrarySortOption; label: string }[] = [
   ...SORT_OPTIONS,
   { value: "-rating", label: "My rating (high to low)" },
   { value: "rating", label: "My rating (low to high)" },
+  { value: "-addedAt", label: "Added to Lib (recent to old)" },
+  { value: "addedAt", label: "Added to Lib (old to recent)" },
 ];
 
 const VALID_LIBRARY_SORTS: LibrarySortOption[] = LIBRARY_SORT_OPTIONS.map((option) => option.value);
@@ -108,5 +115,16 @@ export function sortByRating<T extends { userRating: number | null }>(entries: T
   return [...entries].sort((a, b) => {
     const diff = (a.userRating ?? 0) - (b.userRating ?? 0);
     return sort === "rating" ? diff : -diff;
+  });
+}
+
+export function isDateAddedSort(sort: LibrarySortOption): sort is "addedAt" | "-addedAt" {
+  return sort === "addedAt" || sort === "-addedAt";
+}
+
+export function sortByDateAdded<T extends { addedAt: string }>(entries: T[], sort: LibrarySortOption): T[] {
+  return [...entries].sort((a, b) => {
+    const diff = a.addedAt.localeCompare(b.addedAt);
+    return sort === "addedAt" ? diff : -diff;
   });
 }

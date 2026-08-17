@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { GameRecord } from "@/lib/types";
 import { isCustomGameId } from "@/lib/customGames";
+import { formatReleaseDate } from "@/lib/catalogSearch";
 import { LibraryButton } from "./LibraryButton";
 
 function regionBadges(game: GameRecord): string[] {
@@ -52,7 +53,9 @@ export function GameCard({ game }: { game: GameRecord }) {
             ))}
           </div>
           <p className="mt-2 line-clamp-1 text-xs text-zinc-500">{game.publisher ?? "Unknown publisher"}</p>
-          <p className="mt-1 text-xs text-zinc-500">{game.releaseYear ?? "Year unknown"}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {formatReleaseDate(game.releaseYear, game.releaseMonth) ?? "Year unknown"}
+          </p>
         </div>
       </Link>
       <div className="px-3 pb-3">

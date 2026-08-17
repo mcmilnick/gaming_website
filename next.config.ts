@@ -7,15 +7,30 @@ const nextConfig: NextConfig = {
         // The catalog is fetched at runtime (see src/lib/gamesStore.ts)
         // instead of being bundled into the JS, specifically so it can be
         // cached on its own - a code deploy that doesn't touch game data
-        // shouldn't force everyone to re-download 20+MB of it. It only
-        // actually changes when a maintainer reruns the IGDB fetch script,
-        // so a day of hard caching plus a week of background revalidation
-        // is a safe tradeoff between freshness and repeat-visit cost.
+        // shouldn't force everyone to re-download 20+MB of it. It's fetched
+        // as games.json?v=<version>, where <version> is a content hash from
+        // games-manifest.json below - since a given version's contents never
+        // change, this is safe to cache as hard and long as possible. A data
+        // refresh gets a new version/URL, so visitors never have to wait out
+        // a stale cache window to see it (that's what plain time-based
+        // caching here used to do, and it was a real, confusing bug).
         source: "/games.json",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=86400, stale-while-revalidate=604800",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        // The manifest is tiny (one hash) and is what makes the above safe -
+        // it must always be revalidated so the app can notice a new version
+        // right away, never cached and silently served stale.
+        source: "/games-manifest.json",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache",
           },
         ],
       },

@@ -1,5 +1,7 @@
 // Fetches games for a set of platforms from IGDB and writes them to
-// public/games.json, replacing whatever is there.
+// public/games.json (plus public/games-manifest.json, a version pointer -
+// see next.config.ts and src/lib/gamesStore.ts for how it's used), replacing
+// whatever is there.
 //
 // Requires IGDB_CLIENT_ID and IGDB_CLIENT_SECRET (from a Twitch Developer
 // app: https://dev.twitch.tv/console/apps). Run with:
@@ -13,6 +15,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const CLIENT_ID = process.env.IGDB_CLIENT_ID;
 const CLIENT_SECRET = process.env.IGDB_CLIENT_SECRET;
@@ -68,6 +71,7 @@ const TARGET_PLATFORM_NAMES = [
 ];
 
 const OUTPUT_PATH = path.join(__dirname, "..", "public", "games.json");
+const MANIFEST_PATH = path.join(__dirname, "..", "public", "games-manifest.json");
 const PAGE_SIZE = 500;
 const REQUEST_DELAY_MS = 300;
 
@@ -132,7 +136,8 @@ async function fetchAllGamesForPlatform(accessToken, platform) {
   for (;;) {
     const body = [
       "fields name, first_release_date, cover.image_id, game_type,",
-      "involved_companies.company.name, involved_companies.developer, involved_companies.publisher;",
+      "involved_companies.company.name, involved_companies.developer, involved_companies.publisher,",
+      "release_dates.y, release_dates.m, release_dates.date, release_dates.date_format;",
       `where platforms = (${platform.id});`,
       `limit ${PAGE_SIZE};`,
       `offset ${offset};`,
@@ -159,13 +164,44 @@ async function fetchAllGamesForPlatform(accessToken, platform) {
 // field to distinguish that case. parent_game is deliberately not used here.
 const DERIVATIVE_GAME_TYPES = new Set([5, 12]);
 
+// IGDB's date_formats reference table: 0 = YYYYMMDD, 1 = YYYYMM - both carry
+// a real month. Everything else (2 = YYYY, 3-6 = quarter, 7 = TBD) has no
+// real month - IGDB still fills in a placeholder `m` for those (observed
+// defaulting to December, not January), so we deliberately ignore `m` unless
+// the format says it's real.
+const REAL_MONTH_DATE_FORMATS = new Set([0, 1]);
+
+// A game can have many release_dates rows (one per region/platform/rerelease).
+// We want the single earliest one, matching what first_release_date already
+// represented, but read directly off the row so we also get its real month
+// (if any) instead of just a year.
+function earliestReleaseDate(igdbGame) {
+  const rows = igdbGame.release_dates || [];
+  let earliest = null;
+  for (const row of rows) {
+    if (row.date == null) continue;
+    if (!earliest || row.date < earliest.date) earliest = row;
+  }
+  return earliest;
+}
+
 function mapGame(igdbGame, platformName) {
   const involved = igdbGame.involved_companies || [];
   const developer = involved.find((c) => c.developer)?.company?.name ?? null;
   const publisher = involved.find((c) => c.publisher)?.company?.name ?? null;
-  const releaseYear = igdbGame.first_release_date
-    ? new Date(igdbGame.first_release_date * 1000).getUTCFullYear()
-    : null;
+
+  const earliest = earliestReleaseDate(igdbGame);
+  let releaseYear = null;
+  let releaseMonth = null;
+  if (earliest) {
+    releaseYear = earliest.y ?? null;
+    releaseMonth = REAL_MONTH_DATE_FORMATS.has(earliest.date_format) ? earliest.m ?? null : null;
+  } else if (igdbGame.first_release_date) {
+    // Fallback for the rare game with a first_release_date but no
+    // release_dates rows at all - year only, no month to trust.
+    releaseYear = new Date(igdbGame.first_release_date * 1000).getUTCFullYear();
+  }
+
   const coverUrl = igdbGame.cover?.image_id
     ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${igdbGame.cover.image_id}.jpg`
     : null;
@@ -177,13 +213,15 @@ function mapGame(igdbGame, platformName) {
     console: platformName,
     developer,
     publisher,
-    // IGDB's release_dates-by-region breakdown isn't fetched here to keep
-    // this script simple - releaseYear covers sorting/filtering needs.
-    // Revisit if per-region dates (like the old Wikipedia data had) matter.
+    // IGDB's release_dates-by-region breakdown isn't fetched region-by-region
+    // here to keep this script simple - releaseYear/releaseMonth cover
+    // sorting/filtering needs. Revisit if per-region dates (like the old
+    // Wikipedia data had) matter.
     releaseJapan: null,
     releaseNA: null,
     releasePAL: null,
     releaseYear,
+    releaseMonth,
     coverUrl,
     isModOrHack,
   };
@@ -209,8 +247,19 @@ function mapGame(igdbGame, platformName) {
 
   allGames.sort((a, b) => a.title.localeCompare(b.title));
 
-  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(allGames, null, 2));
+  const contents = JSON.stringify(allGames, null, 2);
+  fs.writeFileSync(OUTPUT_PATH, contents);
   console.log(`\nWrote ${allGames.length} games to ${OUTPUT_PATH}`);
+
+  // A content hash, not a timestamp - the app fetches games-manifest.json on
+  // every load (cheap, always revalidated) to learn the current version, then
+  // requests games.json?v=<version> (cached forever, since a version only
+  // ever points at exactly one set of contents). This is what makes a data
+  // refresh show up for every visitor immediately instead of only after
+  // their browser's day-long cache happens to expire.
+  const version = crypto.createHash("sha256").update(contents).digest("hex").slice(0, 12);
+  fs.writeFileSync(MANIFEST_PATH, JSON.stringify({ version }));
+  console.log(`Wrote manifest (version ${version}) to ${MANIFEST_PATH}`);
 })().catch((err) => {
   console.error("FAILED:", err);
   process.exit(1);

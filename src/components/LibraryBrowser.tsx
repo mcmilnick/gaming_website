@@ -4,7 +4,14 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLibrary } from "@/hooks/useLibrary";
-import { parseLibrarySortParam, isRatingSort, sortByRating, LIBRARY_SORT_OPTIONS } from "@/lib/library";
+import {
+  parseLibrarySortParam,
+  isRatingSort,
+  sortByRating,
+  isDateAddedSort,
+  sortByDateAdded,
+  LIBRARY_SORT_OPTIONS,
+} from "@/lib/library";
 import { filterAndSortByCatalog, getDistinctConsoles } from "@/lib/catalogSearch";
 import { useGames } from "@/hooks/useGames";
 import { isCustomGameId } from "@/lib/customGames";
@@ -42,6 +49,10 @@ export function LibraryBrowser() {
     if (isRatingSort(sort)) {
       const searched = filterAndSortByCatalog(eligible, { search, console: consoleFilter });
       return sortByRating(searched, sort);
+    }
+    if (isDateAddedSort(sort)) {
+      const searched = filterAndSortByCatalog(eligible, { search, console: consoleFilter });
+      return sortByDateAdded(searched, sort);
     }
     return filterAndSortByCatalog(eligible, { search, console: consoleFilter, sort });
   }, [entries, statusFilter, source, includeMods, search, consoleFilter, sort, gamesById]);
