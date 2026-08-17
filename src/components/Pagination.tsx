@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type PaginationProps = {
   page: number;
@@ -8,15 +12,23 @@ type PaginationProps = {
 
 type PageEntry = number | "ellipsis";
 
-// Current page, then up to the next 4 page numbers, then (if there's a real
-// gap) an ellipsis and the final page - a standard windowed pagination.
+// Up to 4 pages before and after the current one, plus the first and last
+// page always shown (with an ellipsis bridging any real gap) - a standard
+// windowed pagination.
 function getPageWindow(current: number, total: number): PageEntry[] {
+  const windowStart = Math.max(current - 4, 1);
   const windowEnd = Math.min(current + 4, total);
   const pages: PageEntry[] = [];
-  for (let p = current; p <= windowEnd; p++) pages.push(p);
+
+  if (windowStart > 1) {
+    pages.push(1);
+    if (windowStart > 2) pages.push("ellipsis");
+  }
+
+  for (let p = windowStart; p <= windowEnd; p++) pages.push(p);
 
   if (windowEnd < total) {
-    if (total - windowEnd > 1) pages.push("ellipsis");
+    if (windowEnd < total - 1) pages.push("ellipsis");
     pages.push(total);
   }
 
@@ -24,9 +36,21 @@ function getPageWindow(current: number, total: number): PageEntry[] {
 }
 
 export function Pagination({ page, totalPages, buildHref }: PaginationProps) {
+  const router = useRouter();
+  const [jumpValue, setJumpValue] = useState("");
+
   if (totalPages <= 1) return null;
 
   const pageWindow = getPageWindow(page, totalPages);
+
+  function handleJumpSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const parsed = Number(jumpValue);
+    if (!Number.isFinite(parsed) || jumpValue.trim() === "") return;
+    const target = Math.min(Math.max(Math.round(parsed), 1), totalPages);
+    setJumpValue("");
+    router.push(buildHref(target));
+  }
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-2 py-8">
@@ -68,6 +92,24 @@ export function Pagination({ page, totalPages, buildHref }: PaginationProps) {
           Next
         </Link>
       )}
+
+      <form onSubmit={handleJumpSubmit} className="relative ml-16">
+        <label
+          htmlFor="jumpToPage"
+          className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs text-zinc-500"
+        >
+          Type Page #
+        </label>
+        <input
+          id="jumpToPage"
+          type="number"
+          min={1}
+          max={totalPages}
+          value={jumpValue}
+          onChange={(e) => setJumpValue(e.target.value)}
+          className="w-16 rounded border border-zinc-700 bg-zinc-900 px-2 py-2 text-center text-sm text-zinc-100 focus:border-emerald-600 focus:outline-none"
+        />
+      </form>
     </div>
   );
 }
