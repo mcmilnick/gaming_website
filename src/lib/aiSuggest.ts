@@ -33,6 +33,12 @@ export type SuggestOptions = {
   entries: LibraryEntry[];
   includeRatings: boolean;
   console: string; // "" = no constraint
+  // Every console name our own catalog uses. Passed through so Gemini's
+  // "Console:" answer can be matched back to a specific catalog entry - the
+  // same title can exist under several platforms (e.g. a Virtual Console
+  // re-release), and without this the app has no way to tell which one
+  // Gemini actually meant, so it displays whichever matches by title alone.
+  catalogConsoles: string[];
 };
 
 function buildPrompt(opts: SuggestOptions): string {
@@ -60,6 +66,9 @@ function buildPrompt(opts: SuggestOptions): string {
     "Title: <game title>",
     "Console: <console/platform>",
     "Why: <2-3 sentences on why this fits my taste, referencing specific games from my library>",
+    "",
+    "For the Console line specifically: if the game was released on one of these exact platforms, use that exact name verbatim (don't abbreviate, e.g. write \"Super Nintendo Entertainment System\" not \"SNES\"). If it wasn't released on any of them, name the actual platform normally.",
+    opts.catalogConsoles.join(", "),
   ].join("\n");
 }
 
