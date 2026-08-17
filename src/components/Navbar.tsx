@@ -20,6 +20,9 @@ export function Navbar() {
           <Link href="/lists" className="hover:text-zinc-100">
             My Lists
           </Link>
+          <Link href="/suggest" className="hover:text-zinc-100">
+            Suggest a Game
+          </Link>
           <Link href="/backup" className="hover:text-zinc-100">
             Local Backup
           </Link>
