@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useLibrary } from "@/hooks/useLibrary";
 import {
   parseLibrarySortParam,
@@ -13,19 +13,23 @@ import {
   LIBRARY_SORT_OPTIONS,
 } from "@/lib/library";
 import { filterAndSortByCatalog, getDistinctConsoles } from "@/lib/catalogSearch";
+import { paginate } from "@/lib/games";
 import { useGames } from "@/hooks/useGames";
 import { isCustomGameId } from "@/lib/customGames";
 import { FilterBar } from "@/components/FilterBar";
 import { LibraryEntryRow } from "@/components/LibraryEntryRow";
 import { Panel } from "@/components/Panel";
+import { Pagination } from "@/components/Pagination";
 
 const VALID_SOURCES = ["base", "custom", "all"] as const;
 type Source = (typeof VALID_SOURCES)[number];
+const LIBRARY_PAGE_SIZE = 40;
 
 export function LibraryBrowser() {
   const { entries, hydrated } = useLibrary();
   const { gamesById, hydrated: gamesHydrated } = useGames();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const search = searchParams.get("search") ?? "";
   const consoleFilter = searchParams.get("console") ?? "";
@@ -36,6 +40,7 @@ export function LibraryBrowser() {
   // should disappear on first load just because a filter exists.
   const source: Source = VALID_SOURCES.includes(sourceParam as Source) ? (sourceParam as Source) : "all";
   const includeMods = searchParams.get("includeMods") === "1";
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
   const consoles = useMemo(() => getDistinctConsoles(entries), [entries]);
 
@@ -56,6 +61,15 @@ export function LibraryBrowser() {
     }
     return filterAndSortByCatalog(eligible, { search, console: consoleFilter, sort });
   }, [entries, statusFilter, source, includeMods, search, consoleFilter, sort, gamesById]);
+
+  const { items: results, count } = paginate(filtered, page, LIBRARY_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(count / LIBRARY_PAGE_SIZE));
+
+  function buildHref(targetPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(targetPage));
+    return `${pathname}?${params.toString()}`;
+  }
 
   if (!hydrated || !gamesHydrated) {
     return <div className="mx-auto max-w-6xl px-4 py-8 text-zinc-500">Loading your library…</div>;
@@ -114,11 +128,13 @@ export function LibraryBrowser() {
         <p className="mt-12 text-center text-zinc-500">No library entries matched your filters.</p>
       ) : (
         <div className="mt-6 flex flex-col gap-4">
-          {filtered.map((entry) => (
+          {results.map((entry) => (
             <LibraryEntryRow key={`${entry.id}:${entry.notes}`} entry={entry} />
           ))}
         </div>
       )}
+
+      <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
     </div>
   );
 }
