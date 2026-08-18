@@ -68,7 +68,7 @@ export function FilterBar<S extends string>({
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
       <CatalogFilterFields
         consoles={consoles}
         search={currentSearch}
