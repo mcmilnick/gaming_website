@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { getSql } from "@/lib/db";
 import type { GameRecord } from "@/lib/types";
 
 type GameRow = {
@@ -28,6 +28,7 @@ type GameRow = {
 // every single click while still making a refresh show up almost
 // immediately.
 export async function GET() {
+  const sql = getSql();
   const rows = (await sql`
     SELECT id, title, console, developer, publisher, release_year, release_month, cover_url, is_mod_or_hack
     FROM games
