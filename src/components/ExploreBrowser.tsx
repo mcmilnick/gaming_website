@@ -26,7 +26,10 @@ export function ExploreBrowser() {
   const consoleFilter = searchParams.get("console") ?? "";
   const sort: SortOption = parseSortParam(searchParams.get("sort"));
   const sourceParam = searchParams.get("source");
-  const source: Source = VALID_SOURCES.includes(sourceParam as Source) ? (sourceParam as Source) : "base";
+  // "All Games" (base catalog + your own added games) is the default now -
+  // defaulting to base-only used to hide a game right after you added it,
+  // unless you knew to switch this filter.
+  const source: Source = VALID_SOURCES.includes(sourceParam as Source) ? (sourceParam as Source) : "all";
   const includeMods = searchParams.get("includeMods") === "1";
   const hideInLibrary = searchParams.get("hideInLibrary") === "1";
   const statusFilter = searchParams.get("status") ?? "";

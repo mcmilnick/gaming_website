@@ -2,14 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGames } from "@/hooks/useGames";
-import { addCustomGame, removeCustomGame } from "@/lib/customGames";
+import { addCustomGame } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
-import { useLists } from "@/hooks/useLists";
-import { removeEntryFromList } from "@/lib/lists";
-import { removeFromLibrary } from "@/lib/library";
 import { normalizeForSearch } from "@/lib/catalogSearch";
 import type { GameRecord } from "@/lib/types";
 
@@ -25,7 +21,6 @@ const EMPTY_FORM = {
 export function AddGamesForm() {
   const { games, hydrated } = useCustomGames();
   const { games: catalogGames, hydrated: catalogHydrated } = useGames();
-  const { lists } = useLists();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState(EMPTY_FORM);
@@ -52,16 +47,19 @@ export function AddGamesForm() {
     setCoverPreviewFailed(false);
   }
 
-  // Supports the "Copy as My Game" button on a game's detail page - it links
-  // here with ?copyFrom=<id> instead of making the user re-search for the
-  // game they just came from. Waits on both games sources to hydrate (the
-  // linked game could be either a base catalog game or one of the user's own
-  // custom games) before looking it up, then strips the param so it doesn't
-  // re-fire the prefill if the user navigates back here later.
+  // Supports the "Add Similar Game" button on a game's detail page - it
+  // links here with ?copyFrom=<id> instead of making the user re-search for
+  // the game they just came from. Waits on both games sources to hydrate
+  // (the linked game could be either a base catalog game or one of the
+  // user's own custom games) before looking it up, then strips the param so
+  // it doesn't re-fire the prefill if the user navigates back here later.
+  // Syncing form state from a URL param is one of the legitimate uses of an
+  // effect (React's own docs call this out) - hence the lint override below.
   useEffect(() => {
     const copyFromId = searchParams.get("copyFrom");
     if (!copyFromId || !catalogHydrated || !hydrated) return;
     const source = combinedGames.find((candidate) => candidate.id === copyFromId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (source) handleCopyFrom(source);
     router.replace("/add-games");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,16 +82,6 @@ export function AddGamesForm() {
     setForm(EMPTY_FORM);
     setCopyQuery("");
     setCoverPreviewFailed(false);
-  }
-
-  function handleRemove(gameId: string) {
-    removeFromLibrary(gameId);
-    for (const list of lists) {
-      if (list.entries.some((entry) => entry.gameId === gameId)) {
-        removeEntryFromList(list.id, gameId);
-      }
-    }
-    removeCustomGame(gameId);
   }
 
   return (
@@ -253,42 +241,6 @@ export function AddGamesForm() {
           Add game
         </button>
       </form>
-
-      <h2 className="mt-8 text-lg font-semibold text-zinc-100">Your added games</h2>
-      {!hydrated ? (
-        <p className="mt-2 text-sm text-zinc-500">Loading…</p>
-      ) : games.length === 0 ? (
-        <p className="mt-2 text-sm text-zinc-500">You haven&apos;t added any games yet.</p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {games.map((game) => (
-            <li
-              key={game.id}
-              className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm"
-            >
-              <div>
-                <Link href={`/game/${game.id}`} className="text-zinc-100 hover:underline">
-                  {game.title}
-                </Link>
-                <span className="ml-2 text-xs text-zinc-500">
-                  {[game.console, game.releaseYear].filter(Boolean).join(" · ")}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm(`Delete "${game.title}"? This removes it from your catalog, Library, and any lists.`)) {
-                    handleRemove(game.id);
-                  }
-                }}
-                className="text-xs text-red-400 hover:text-red-300"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

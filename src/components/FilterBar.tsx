@@ -6,6 +6,15 @@ import { STATUS_OPTIONS } from "@/lib/library";
 
 type FilterKey = "search" | "console" | "sort" | "source" | "includeMods" | "hideInLibrary" | "status";
 
+// "All Games" first/default - the old default (Site Games only) hid a
+// custom-added game from search unless you knew to switch this, which was
+// a recurring source of "why can't I find the game I just added" confusion.
+const SOURCE_OPTIONS = [
+  { value: "all", shortLabel: "All", label: "All Games" },
+  { value: "base", shortLabel: "Site", label: "Site Games" },
+  { value: "custom", shortLabel: "Mine", label: "My Added Games" },
+] as const;
+
 // Shared by Explore and the Library so the two filter boxes can never drift
 // apart. currentHideInLibrary is Explore-only - omit it (leave undefined) to
 // hide that checkbox, since "hide games already in my library" is meaningless
@@ -51,7 +60,7 @@ export function FilterBar<S extends string>({
     if (next.search) params.set("search", next.search);
     if (next.console) params.set("console", next.console);
     if (next.sort) params.set("sort", next.sort);
-    if (next.source && next.source !== "base") params.set("source", next.source);
+    if (next.source && next.source !== "all") params.set("source", next.source);
     if (next.includeMods) params.set("includeMods", next.includeMods);
     if (next.hideInLibrary) params.set("hideInLibrary", next.hideInLibrary);
     if (next.status) params.set("status", next.status);
@@ -72,16 +81,6 @@ export function FilterBar<S extends string>({
       />
 
       <select
-        defaultValue={currentSource}
-        onChange={(e) => navigate({ source: e.target.value })}
-        className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-      >
-        <option value="base">Site Games</option>
-        <option value="custom">My Added Games</option>
-        <option value="all">Site Games + Mine</option>
-      </select>
-
-      <select
         defaultValue={currentStatus}
         onChange={(e) => navigate({ status: e.target.value })}
         className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
@@ -93,6 +92,26 @@ export function FilterBar<S extends string>({
           </option>
         ))}
       </select>
+
+      <div className="flex items-center gap-2">
+        {SOURCE_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            title={option.label}
+            aria-label={option.label}
+            aria-pressed={currentSource === option.value}
+            onClick={() => navigate({ source: option.value })}
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border text-[10px] font-medium transition-colors ${
+              currentSource === option.value
+                ? "border-emerald-600 bg-emerald-900/40 text-emerald-300"
+                : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
+            }`}
+          >
+            {option.shortLabel}
+          </button>
+        ))}
+      </div>
 
       <div className="flex flex-col gap-1.5">
         <label className="flex items-center gap-2 text-sm text-zinc-300">
