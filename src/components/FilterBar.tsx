@@ -10,9 +10,9 @@ type FilterKey = "search" | "console" | "sort" | "source" | "includeMods" | "hid
 // custom-added game from search unless you knew to switch this, which was
 // a recurring source of "why can't I find the game I just added" confusion.
 const SOURCE_OPTIONS = [
-  { value: "all", shortLabel: "All", label: "All Games" },
-  { value: "base", shortLabel: "Site", label: "Site Games" },
-  { value: "custom", shortLabel: "Mine", label: "My Added Games" },
+  { value: "all", label: "All" },
+  { value: "base", label: "Basic" },
+  { value: "custom", label: "User Added" },
 ] as const;
 
 // Shared by Explore and the Library so the two filter boxes can never drift
@@ -93,24 +93,25 @@ export function FilterBar<S extends string>({
         ))}
       </select>
 
-      <div className="flex items-center gap-2">
-        {SOURCE_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            title={option.label}
-            aria-label={option.label}
-            aria-pressed={currentSource === option.value}
-            onClick={() => navigate({ source: option.value })}
-            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border text-[10px] font-medium transition-colors ${
-              currentSource === option.value
-                ? "border-emerald-600 bg-emerald-900/40 text-emerald-300"
-                : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
-            }`}
-          >
-            {option.shortLabel}
-          </button>
-        ))}
+      <div className="flex flex-col gap-1.5 rounded border border-zinc-700 bg-zinc-900 px-3 py-2">
+        <span className="text-xs text-zinc-400">Displayed Games</span>
+        <div className="flex flex-col gap-1.5">
+          {SOURCE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={currentSource === option.value}
+              onClick={() => navigate({ source: option.value })}
+              className={`rounded-full border px-4 py-1 text-xs font-medium transition-colors ${
+                currentSource === option.value
+                  ? "border-emerald-600 bg-emerald-900/40 text-emerald-300"
+                  : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:bg-zinc-800"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
