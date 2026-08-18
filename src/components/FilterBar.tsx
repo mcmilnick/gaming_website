@@ -68,32 +68,64 @@ export function FilterBar<S extends string>({
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
-      <CatalogFilterFields
-        consoles={consoles}
-        search={currentSearch}
-        onSearchChange={(value) => navigate({ search: value })}
-        console={currentConsole}
-        onConsoleChange={(value) => navigate({ console: value })}
-        sort={currentSort}
-        onSortChange={(value) => navigate({ sort: value })}
-        sortOptions={sortOptions}
-      />
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+      {/* Everything except "Displayed Games" lives in its own column so that
+          box's height (it's tall - three stacked buttons) can't push these
+          down. In a single shared flex-wrap row, wrapped siblings sit below
+          the tallest item on the previous line, which meant the checkboxes
+          ended up below the bottom of "Displayed Games" instead of right
+          under the (much shorter) controls row. */}
+      <div className="flex flex-1 flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
+          <CatalogFilterFields
+            consoles={consoles}
+            search={currentSearch}
+            onSearchChange={(value) => navigate({ search: value })}
+            console={currentConsole}
+            onConsoleChange={(value) => navigate({ console: value })}
+            sort={currentSort}
+            onSortChange={(value) => navigate({ sort: value })}
+            sortOptions={sortOptions}
+          />
 
-      <select
-        defaultValue={currentStatus}
-        onChange={(e) => navigate({ status: e.target.value })}
-        className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-      >
-        <option value="">All statuses</option>
-        {STATUS_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+          <select
+            defaultValue={currentStatus}
+            onChange={(e) => navigate({ status: e.target.value })}
+            className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+          >
+            <option value="">All statuses</option>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <div className="flex flex-col gap-1.5 rounded border border-zinc-700 bg-zinc-900 px-3 py-2">
+        <div className="flex flex-col gap-1.5">
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              defaultChecked={currentIncludeMods}
+              onChange={(e) => navigate({ includeMods: e.target.checked ? "1" : "" })}
+            />
+            Include Mods/Hacks
+          </label>
+
+          {currentHideInLibrary !== undefined && (
+            <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                defaultChecked={currentHideInLibrary}
+                onChange={(e) => navigate({ hideInLibrary: e.target.checked ? "1" : "" })}
+              />
+              Hide games already in my library
+            </label>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-shrink-0 flex-col gap-1.5 rounded border border-zinc-700 bg-zinc-900 px-3 py-2">
         <span className="text-xs text-zinc-400">Displayed Games</span>
         <div className="flex flex-col gap-1.5">
           {SOURCE_OPTIONS.map((option) => (
@@ -112,28 +144,6 @@ export function FilterBar<S extends string>({
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label className="flex items-center gap-2 text-sm text-zinc-300">
-          <input
-            type="checkbox"
-            defaultChecked={currentIncludeMods}
-            onChange={(e) => navigate({ includeMods: e.target.checked ? "1" : "" })}
-          />
-          Include Homebrew/Mods/Hacks
-        </label>
-
-        {currentHideInLibrary !== undefined && (
-          <label className="flex items-center gap-2 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              defaultChecked={currentHideInLibrary}
-              onChange={(e) => navigate({ hideInLibrary: e.target.checked ? "1" : "" })}
-            />
-            Hide games already in my library
-          </label>
-        )}
       </div>
     </div>
   );
