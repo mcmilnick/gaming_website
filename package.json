@@ -10,7 +10,9 @@
     "fetch-games": "node --env-file=.env.local scripts/fetch-igdb-games.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "next": "16.3.0",
+    "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

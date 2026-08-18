@@ -2,7 +2,7 @@ import type { GameRecord } from "./types";
 import { filterAndSortByCatalog, type CatalogFilters } from "./catalogSearch";
 
 // The catalog itself is no longer imported here - it's fetched at runtime
-// from /games.json (see gamesStore.ts / useGames()) instead of being bundled
+// from /api/games (see gamesStore.ts / useGames()) instead of being bundled
 // into the app's JS. Everything in this file operates on a games array
 // passed in by the caller.
 

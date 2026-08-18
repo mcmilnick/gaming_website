@@ -1,21 +1,20 @@
-// Fetches games for a set of platforms from IGDB and writes them to
-// public/games.json (plus public/games-manifest.json, a version pointer -
-// see next.config.ts and src/lib/gamesStore.ts for how it's used), replacing
-// whatever is there.
+// Fetches games for a set of platforms from IGDB and loads them into the
+// `games` table in Postgres (see src/app/api/games/route.ts for the read
+// side), replacing whatever is there.
 //
 // Requires IGDB_CLIENT_ID and IGDB_CLIENT_SECRET (from a Twitch Developer
-// app: https://dev.twitch.tv/console/apps). Run with:
+// app: https://dev.twitch.tv/console/apps) and DATABASE_URL (from the Neon
+// database - see .env.local). Run with:
 //   npm run fetch-games
 // which loads .env.local via Node's --env-file flag.
 //
 // This is a maintainer-side script, not something the deployed app runs -
-// it produces a static file that gets bundled the same way the old
-// Wikipedia-sourced dataset was. No IGDB credentials are ever shipped to
-// the live site.
+// it's meant to be re-run periodically (weekly, by hand for now) to refresh
+// the catalog. No IGDB or database credentials are ever shipped to the live
+// site; the deployed app only ever talks to the database via the read-only
+// query in the API route.
 
-const fs = require("fs");
-const path = require("path");
-const crypto = require("crypto");
+const { Client } = require("pg");
 
 const CLIENT_ID = process.env.IGDB_CLIENT_ID;
 const CLIENT_SECRET = process.env.IGDB_CLIENT_SECRET;
@@ -70,10 +69,9 @@ const TARGET_PLATFORM_NAMES = [
   "Nintendo Switch",
 ];
 
-const OUTPUT_PATH = path.join(__dirname, "..", "public", "games.json");
-const MANIFEST_PATH = path.join(__dirname, "..", "public", "games-manifest.json");
 const PAGE_SIZE = 500;
 const REQUEST_DELAY_MS = 300;
+const DB_CHUNK_SIZE = 500;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -227,6 +225,56 @@ function mapGame(igdbGame, platformName) {
   };
 }
 
+// Replaces the entire contents of the games table with `games`, in one
+// transaction, so anyone querying mid-refresh sees either the old full
+// catalog or the new one, never a half-truncated table. Batched into
+// multi-row INSERTs (DB_CHUNK_SIZE rows each) instead of one INSERT per
+// game - 76,947 individual round trips would be needlessly slow.
+async function writeToDatabase(games) {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query("TRUNCATE TABLE games");
+
+    for (let i = 0; i < games.length; i += DB_CHUNK_SIZE) {
+      const chunk = games.slice(i, i + DB_CHUNK_SIZE);
+      const values = [];
+      const rows = chunk.map((game, idx) => {
+        const base = idx * 9;
+        values.push(
+          game.id,
+          game.title,
+          game.console,
+          game.developer,
+          game.publisher,
+          game.releaseYear,
+          game.releaseMonth,
+          game.coverUrl,
+          game.isModOrHack
+        );
+        const placeholders = Array.from({ length: 9 }, (_, j) => `$${base + j + 1}`).join(", ");
+        return `(${placeholders})`;
+      });
+
+      await client.query(
+        `INSERT INTO games (id, title, console, developer, publisher, release_year, release_month, cover_url, is_mod_or_hack)
+         VALUES ${rows.join(", ")}`,
+        values
+      );
+      console.log(`  Inserted ${Math.min(i + DB_CHUNK_SIZE, games.length)}/${games.length}`);
+    }
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    await client.end();
+  }
+}
+
 (async () => {
   console.log("Authenticating with Twitch...");
   const accessToken = await getAccessToken();
@@ -247,19 +295,9 @@ function mapGame(igdbGame, platformName) {
 
   allGames.sort((a, b) => a.title.localeCompare(b.title));
 
-  const contents = JSON.stringify(allGames, null, 2);
-  fs.writeFileSync(OUTPUT_PATH, contents);
-  console.log(`\nWrote ${allGames.length} games to ${OUTPUT_PATH}`);
-
-  // A content hash, not a timestamp - the app fetches games-manifest.json on
-  // every load (cheap, always revalidated) to learn the current version, then
-  // requests games.json?v=<version> (cached forever, since a version only
-  // ever points at exactly one set of contents). This is what makes a data
-  // refresh show up for every visitor immediately instead of only after
-  // their browser's day-long cache happens to expire.
-  const version = crypto.createHash("sha256").update(contents).digest("hex").slice(0, 12);
-  fs.writeFileSync(MANIFEST_PATH, JSON.stringify({ version }));
-  console.log(`Wrote manifest (version ${version}) to ${MANIFEST_PATH}`);
+  console.log(`\nWriting ${allGames.length} games to the database...`);
+  await writeToDatabase(allGames);
+  console.log("Done.");
 })().catch((err) => {
   console.error("FAILED:", err);
   process.exit(1);

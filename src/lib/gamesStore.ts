@@ -2,18 +2,13 @@
 
 import type { GameRecord } from "./types";
 
-// The catalog is a ~77k-game static file served from /games.json instead of
-// being bundled into the JS (see public/games.json). This module fetches it
-// once per page session and caches the result (plus an id lookup map) in
-// module scope, so every component using useGames() shares one fetch.
-//
-// It's fetched as /games.json?v=<version>, where <version> comes from the
-// tiny games-manifest.json (always revalidated, essentially free to fetch).
-// The versioned URL is then cached by the browser as hard as possible (see
-// next.config.ts) - a version's contents never change, so there's no
-// staleness risk, and a real data update gets a new version/URL so every
-// visitor sees it on their very next load instead of only after a cache
-// window expires.
+// The catalog now lives in Postgres (see scripts/fetch-igdb-games.js for the
+// ingestion side and src/app/api/games/route.ts for the read side) instead
+// of the old static public/games.json file. This module fetches the full
+// catalog from /api/games once per page session and caches the result (plus
+// an id lookup map) in module scope, so every component using useGames()
+// shares one fetch. The route itself is cache-control'd for an hour, so
+// repeat loads across visitors don't each hit the database.
 type GamesState = { games: GameRecord[]; byId: Map<string, GameRecord> };
 
 let cached: GamesState | null = null;
@@ -27,8 +22,7 @@ function notify() {
 async function load() {
   if (cached || inflight) return;
   inflight = (async () => {
-    const manifest: { version: string } = await fetch("/games-manifest.json").then((res) => res.json());
-    const games: GameRecord[] = await fetch(`/games.json?v=${manifest.version}`).then((res) => res.json());
+    const games: GameRecord[] = await fetch("/api/games").then((res) => res.json());
     cached = { games, byId: new Map(games.map((game) => [game.id, game])) };
     inflight = null;
     notify();
