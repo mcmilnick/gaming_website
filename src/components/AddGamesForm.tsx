@@ -71,7 +71,7 @@ export function AddGamesForm() {
     if (!title) return;
 
     const parsedYear = form.releaseYear.trim() ? Number(form.releaseYear) : null;
-    addCustomGame({
+    const game = addCustomGame({
       title,
       console: form.console.trim() || "Game Boy",
       developer: form.developer.trim() || null,
@@ -79,9 +79,7 @@ export function AddGamesForm() {
       releaseYear: parsedYear !== null && Number.isFinite(parsedYear) ? parsedYear : null,
       coverUrl: form.coverUrl.trim() || null,
     });
-    setForm(EMPTY_FORM);
-    setCopyQuery("");
-    setCoverPreviewFailed(false);
+    router.push(`/game/${game.id}`);
   }
 
   return (
