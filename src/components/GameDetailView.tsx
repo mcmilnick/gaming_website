@@ -124,6 +124,12 @@ export function GameDetailView({ id }: { id: string }) {
 
           <div className="mt-6 flex max-w-xs flex-col gap-2">
             <LibraryButton game={game} />
+            <Link
+              href={`/add-games?copyFrom=${encodeURIComponent(game.id)}`}
+              className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-center text-xs font-medium text-zinc-200 transition-colors hover:bg-zinc-700"
+            >
+              Add Similar Game
+            </Link>
             {libraryEntry && (
               <select
                 value={libraryEntry.status}
