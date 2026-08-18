@@ -3,7 +3,7 @@
 // side), replacing whatever is there.
 //
 // Requires IGDB_CLIENT_ID and IGDB_CLIENT_SECRET (from a Twitch Developer
-// app: https://dev.twitch.tv/console/apps) and DATABASE_URL (from the Neon
+// app: https://dev.twitch.tv/console/apps) and GAMES_DB_DATABASE_URL (from the Neon
 // database - see .env.local). Run with:
 //   npm run fetch-games
 // which loads .env.local via Node's --env-file flag.
@@ -270,7 +270,7 @@ function mapGame(igdbGame, platformName) {
 // multi-row INSERTs (DB_CHUNK_SIZE rows each) instead of one INSERT per
 // game - 76,947 individual round trips would be needlessly slow.
 async function writeToDatabase(games) {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client({ connectionString: process.env.GAMES_DB_DATABASE_URL });
   await client.connect();
 
   try {

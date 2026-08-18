@@ -16,7 +16,7 @@ let cachedSql: NeonQueryFunction<false, false> | null = null;
 
 export function getSql(): NeonQueryFunction<false, false> {
   if (!cachedSql) {
-    cachedSql = neon(process.env.DATABASE_URL!);
+    cachedSql = neon(process.env.GAMES_DB_DATABASE_URL!);
   }
   return cachedSql;
 }
