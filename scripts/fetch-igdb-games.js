@@ -67,6 +67,45 @@ const TARGET_PLATFORM_NAMES = [
   "Wii",
   "Wii U",
   "Nintendo Switch",
+
+  // Retro + current-gen consoles/handhelds, deliberately excluding PC/Mac/
+  // Linux/home computers (PC alone would roughly triple the catalog on its
+  // own - see the growth estimate this list came from) and non-console
+  // oddities (VR, mobile, arcade, mainframes).
+  "Sega Master System/Mark III",
+  "Sega Game Gear",
+  "Sega CD",
+  "Sega 32X",
+  "Sega CD 32X",
+  "Atari 2600",
+  "Atari 5200",
+  "Atari 7800",
+  "Atari Lynx",
+  "Atari Jaguar",
+  "Atari Jaguar CD",
+  "ColecoVision",
+  "Intellivision",
+  "Vectrex",
+  "WonderSwan",
+  "WonderSwan Color",
+  "PC-FX",
+  "Philips CD-i",
+  "Nintendo DSi",
+  "New Nintendo 3DS",
+  "Family Computer Disk System",
+  "Satellaview",
+  "Game & Watch",
+  "Pokémon mini",
+  "Odyssey 2 / Videopac G7000",
+  "Fairchild Channel F",
+  "PlayStation Vita",
+  "PlayStation 3",
+  "PlayStation 4",
+  "PlayStation 5",
+  "Xbox 360",
+  "Xbox One",
+  "Xbox Series X|S",
+  "Nintendo Switch 2",
 ];
 
 const PAGE_SIZE = 500;
