@@ -16,8 +16,17 @@ type GameRow = {
 
 // The whole catalog, same shape the client used to get from games.json -
 // gamesStore.ts still loads it once per page session and does all
-// search/sort/filter in memory. Cached for an hour so the (currently
-// weekly) ingestion job doesn't mean every visitor's load is a live query.
+// search/sort/filter in memory.
+//
+// Cache-Control is deliberately short. A long cache here previously meant a
+// database refresh (like adding a batch of new consoles) could stay
+// invisible on the live site for up to the cache duration, even though the
+// data was already live in Postgres - the exact "confusing stale cache"
+// failure the old version-hashed games.json/manifest setup existed to
+// avoid. Traffic here is low (a handful of users) so there's no real cost
+// reason to cache hard; a minute is just enough to avoid a live DB query on
+// every single click while still making a refresh show up almost
+// immediately.
 export async function GET() {
   const rows = (await sql`
     SELECT id, title, console, developer, publisher, release_year, release_month, cover_url, is_mod_or_hack
@@ -40,6 +49,6 @@ export async function GET() {
   }));
 
   return NextResponse.json(games, {
-    headers: { "Cache-Control": "public, max-age=3600" },
+    headers: { "Cache-Control": "public, max-age=60" },
   });
 }
