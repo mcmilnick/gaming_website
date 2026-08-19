@@ -6,7 +6,11 @@ import { filterAndSortByCatalog, type CatalogFilters } from "./catalogSearch";
 // into the app's JS. Everything in this file operates on a games array
 // passed in by the caller.
 
-export const PAGE_SIZE = 24;
+// Divisible by 2, 3, 4, and 5 - the grid's column count at every
+// breakpoint (see ExploreBrowser's grid-cols-2/3/4/5) - so the last row of
+// a page is always full instead of trailing off short at whichever
+// breakpoint the number doesn't divide evenly into.
+export const PAGE_SIZE = 60;
 
 export type { SortOption } from "./catalogSearch";
 
