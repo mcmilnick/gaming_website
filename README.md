@@ -30,3 +30,9 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 - **Consider live/on-blur search instead of requiring Enter.** show as ya go rather than entering a search
 
 - **Split `public/games.json` into a file per console** currently one combined file. would only help pages that can filter by console up front, otherwise you need all of them and then algorithms to combine them.
+
+- **Extend the `/api/games` browser cache window past 60s** cheap, but only helps a given visitor's own repeat loads - doesn't help a first-time visitor or a different browser/device, and delays a data refresh being visible for longer. Deliberately not doing this - it just hides the real problem below.
+
+- **Add Vercel CDN caching (`s-maxage`) to `/api/games`** would let every visitor share one cached response instead of each request re-querying the database, cheap to add. Deliberately not doing this either - it doesn't reduce the ~50MB payload/parse cost, and adds a cache-staleness problem after each catalog refresh that would need a manual purge step. Masks the real issue (see below) rather than fixing it.
+
+- **Real pagination/search at the database level** the actual fix - `/api/games` currently returns the entire catalog (156k+ rows, ~50MB) on every cache-miss load, which gets slower as the catalog grows (already grew once this session). Needs the search/sort/filter/console-filter logic in `catalogSearch.ts` rewritten as real indexed SQL queries (some indexes for this already exist from the DB migration) instead of "load everything, filter in memory" - and the several places that assume the full catalog is already loaded (game detail lookups, Library's mod/hack check, Suggest-a-Game matching, console filter dropdowns) reworked to not depend on that.
