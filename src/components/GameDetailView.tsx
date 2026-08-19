@@ -78,20 +78,28 @@ export function GameDetailView({ id }: { id: string }) {
       </Link>
 
       <div className="mt-4 grid gap-6 sm:grid-cols-[240px_1fr]">
-        <div className="relative flex aspect-[3/4] flex-col items-center justify-center gap-3 rounded-lg bg-zinc-900 p-6 text-center">
-          {isCustomGameId(game.id) && (
-            <span className="absolute left-3 top-3 rounded bg-emerald-900/80 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
-              Mine
-            </span>
-          )}
-          {game.coverUrl ? (
-            <Image src={game.coverUrl} alt={game.title} fill className="object-cover" sizes="240px" />
-          ) : (
-            <>
-              <span className="text-5xl">🎮</span>
-              <span className="text-xs text-zinc-500">No cover art yet</span>
-            </>
-          )}
+        <div>
+          <div className="relative flex aspect-[3/4] flex-col items-center justify-center gap-3 rounded-lg bg-zinc-900 p-6 text-center">
+            {isCustomGameId(game.id) && (
+              <span className="absolute left-3 top-3 rounded bg-emerald-900/80 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
+                Mine
+              </span>
+            )}
+            {game.coverUrl ? (
+              <Image src={game.coverUrl} alt={game.title} fill className="object-cover" sizes="240px" />
+            ) : (
+              <>
+                <span className="text-5xl">🎮</span>
+                <span className="text-xs text-zinc-500">No cover art yet</span>
+              </>
+            )}
+          </div>
+          <Link
+            href={`/add-games?copyFrom=${encodeURIComponent(game.id)}`}
+            className="mt-2 block w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-center text-xs font-medium text-zinc-200 transition-colors hover:bg-zinc-700"
+          >
+            Add Similar Game
+          </Link>
         </div>
 
         <div>
@@ -124,12 +132,6 @@ export function GameDetailView({ id }: { id: string }) {
 
           <div className="mt-6 flex max-w-xs flex-col gap-2">
             <LibraryButton game={game} />
-            <Link
-              href={`/add-games?copyFrom=${encodeURIComponent(game.id)}`}
-              className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-center text-xs font-medium text-zinc-200 transition-colors hover:bg-zinc-700"
-            >
-              Add Similar Game
-            </Link>
             {libraryEntry && (
               <select
                 value={libraryEntry.status}
