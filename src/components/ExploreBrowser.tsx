@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { PAGE_SIZE, filterAndSortGames, paginate } from "@/lib/games";
-import { parseSortParam, getDistinctConsoles, SORT_OPTIONS, type SortOption } from "@/lib/catalogSearch";
+import { parseSortParam, getDistinctConsoles, compareForSort, SORT_OPTIONS, type SortOption } from "@/lib/catalogSearch";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { useGames } from "@/hooks/useGames";
@@ -15,6 +15,24 @@ import { Panel } from "./Panel";
 
 const VALID_SOURCES = ["base", "custom", "all"] as const;
 type Source = (typeof VALID_SOURCES)[number];
+
+// Merges two already-sorted lists (a is small - your matched custom games;
+// b is a server-sorted page of the base catalog) into one correctly-ordered
+// list, instead of just concatenating them - which put every custom game
+// before every base game regardless of where it actually belonged in the
+// current sort order.
+function mergeSorted(a: GameRecord[], b: GameRecord[], sort: SortOption, limit: number): GameRecord[] {
+  const merged: GameRecord[] = [];
+  let i = 0;
+  let j = 0;
+  while (merged.length < limit && (i < a.length || j < b.length)) {
+    if (i >= a.length) merged.push(b[j++]);
+    else if (j >= b.length) merged.push(a[i++]);
+    else if (compareForSort(a[i], b[j], sort) <= 0) merged.push(a[i++]);
+    else merged.push(b[j++]);
+  }
+  return merged;
+}
 
 type SharedParams = {
   search: string;
@@ -230,7 +248,10 @@ function ExploreFastSearchMode({ params }: { params: SharedParams }) {
 
   const serverItems = serverResult?.items ?? [];
   const serverCount = serverResult?.count ?? 0;
-  const results = params.page === 1 ? [...matchedCustomGames, ...serverItems].slice(0, PAGE_SIZE) : serverItems;
+  const results =
+    params.page === 1
+      ? mergeSorted(matchedCustomGames, serverItems, params.sort, PAGE_SIZE)
+      : serverItems;
   const count = serverCount + matchedCustomGames.length;
 
   return (

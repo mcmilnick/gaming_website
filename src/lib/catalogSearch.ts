@@ -75,6 +75,25 @@ function compareSortKeys(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+// Pulled out from filterAndSortByCatalog's sort step so it can also be used
+// to merge two already-sorted lists from different sources by the same
+// order (see ExploreBrowser's fast search path, which sorts the base
+// catalog in SQL and your own custom games in memory, then needs to
+// interleave the two correctly rather than just concatenating them).
+export function compareForSort<T extends CatalogSearchable>(a: T, b: T, sort: SortOption | undefined): number {
+  switch (sort) {
+    case "publisher":
+      return compareSortKeys(sortKey(a.publisher ?? ""), sortKey(b.publisher ?? ""));
+    case "releaseYear":
+      return (releaseSortValue(a) ?? Infinity) - (releaseSortValue(b) ?? Infinity);
+    case "-releaseYear":
+      return (releaseSortValue(b) ?? -Infinity) - (releaseSortValue(a) ?? -Infinity);
+    case "title":
+    default:
+      return compareSortKeys(sortKey(a.title), sortKey(b.title));
+  }
+}
+
 export function filterAndSortByCatalog<T extends CatalogSearchable>(items: T[], filters: CatalogFilters): T[] {
   let results = items;
 
@@ -87,19 +106,7 @@ export function filterAndSortByCatalog<T extends CatalogSearchable>(items: T[], 
     results = results.filter((item) => item.console === filters.console);
   }
 
-  return [...results].sort((a, b) => {
-    switch (filters.sort) {
-      case "publisher":
-        return compareSortKeys(sortKey(a.publisher ?? ""), sortKey(b.publisher ?? ""));
-      case "releaseYear":
-        return (releaseSortValue(a) ?? Infinity) - (releaseSortValue(b) ?? Infinity);
-      case "-releaseYear":
-        return (releaseSortValue(b) ?? -Infinity) - (releaseSortValue(a) ?? -Infinity);
-      case "title":
-      default:
-        return compareSortKeys(sortKey(a.title), sortKey(b.title));
-    }
-  });
+  return [...results].sort((a, b) => compareForSort(a, b, filters.sort));
 }
 
 // A single comparable number for year+month, so "Release date" sorts by
