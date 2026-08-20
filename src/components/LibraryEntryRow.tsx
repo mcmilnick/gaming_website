@@ -5,9 +5,9 @@ import Link from "next/link";
 import { removeFromLibrary, updateEntry, STATUS_LABELS, type LibraryEntry, type LibraryStatus } from "@/lib/library";
 import { formatReleaseDate } from "@/lib/catalogSearch";
 import { useLists } from "@/hooks/useLists";
-import { useCustomGames } from "@/hooks/useCustomGames";
-import { useGames } from "@/hooks/useGames";
 import { removeEntryFromList, type GameList, type ListEntry } from "@/lib/lists";
+import { igdbCoverSmall } from "@/lib/igdbImage";
+import type { GameRecord } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { CopyListTagsButton } from "@/components/CopyListTagsButton";
 import { AddToListSelect } from "@/components/AddToListSelect";
@@ -16,15 +16,13 @@ import { NotesEditor } from "@/components/NotesEditor";
 // The parent list keys each row on `${entry.id}:${entry.notes}`, so this
 // component (and the NotesEditor inside it) remounts whenever the stored
 // notes change from elsewhere, picking up the fresh value automatically.
-export function LibraryEntryRow({ entry }: { entry: LibraryEntry }) {
+//
+// catalogGame is resolved by the parent (LibraryBrowser), which already
+// looks up just the handful of games actually in the library rather than
+// this row independently pulling in the whole catalog to get one cover url.
+export function LibraryEntryRow({ entry, catalogGame }: { entry: LibraryEntry; catalogGame: GameRecord | undefined }) {
   const { lists } = useLists();
-  const { games: customGames } = useCustomGames();
-  const { gamesById } = useGames();
-
-  // Library entries only store a lightweight snapshot (no cover image), so
-  // resolve the live catalog record to get artwork if it's still around.
-  const catalogGame = gamesById.get(entry.id) ?? customGames.find((game) => game.id === entry.id);
-  const coverUrl = catalogGame?.coverUrl ?? null;
+  const coverUrl = igdbCoverSmall(catalogGame?.coverUrl);
   const releaseDate = formatReleaseDate(entry.releaseYear, entry.releaseMonth);
 
   const memberships = lists
@@ -38,7 +36,7 @@ export function LibraryEntryRow({ entry }: { entry: LibraryEntry }) {
         className="relative flex h-32 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-zinc-800 text-2xl"
       >
         {coverUrl ? (
-          <Image src={coverUrl} alt={entry.title} fill className="object-cover" sizes="96px" />
+          <Image src={coverUrl} alt={entry.title} fill unoptimized className="object-cover" sizes="96px" />
         ) : (
           "🎮"
         )}

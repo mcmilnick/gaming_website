@@ -7,6 +7,7 @@ import { useGames } from "@/hooks/useGames";
 import { addCustomGame } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { normalizeForSearch } from "@/lib/catalogSearch";
+import { igdbCoverSmall } from "@/lib/igdbImage";
 import type { GameRecord } from "@/lib/types";
 
 const EMPTY_FORM = {
@@ -218,9 +219,10 @@ export function AddGamesForm() {
               {form.coverUrl.trim() && !coverPreviewFailed ? (
                 <Image
                   key={form.coverUrl.trim()}
-                  src={form.coverUrl.trim()}
+                  src={igdbCoverSmall(form.coverUrl.trim())!}
                   alt="Cover preview"
                   fill
+                  unoptimized
                   className="object-cover"
                   sizes="48px"
                   onError={() => setCoverPreviewFailed(true)}

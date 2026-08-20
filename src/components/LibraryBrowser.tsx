@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLibrary } from "@/hooks/useLibrary";
+import { useCustomGames } from "@/hooks/useCustomGames";
 import {
   parseLibrarySortParam,
   isRatingSort,
@@ -27,6 +28,7 @@ const LIBRARY_PAGE_SIZE = 40;
 
 export function LibraryBrowser() {
   const { entries, hydrated } = useLibrary();
+  const { games: customGames } = useCustomGames();
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
@@ -43,22 +45,22 @@ export function LibraryBrowser() {
 
   const consoles = useMemo(() => getDistinctConsoles(entries), [entries]);
 
-  // Only need the mod/hack flag for games actually in the library - a
-  // small, known set of ids - not the whole ~150k-game catalog. Custom
-  // games always have isModOrHack: false (see customGames.ts), so they're
-  // excluded from the lookup rather than sent to a database that doesn't
-  // have them at all.
+  // Only need catalog details (mod/hack flag, cover art) for games actually
+  // in the library - a small, known set of ids - not the whole ~150k-game
+  // catalog. Custom games always have isModOrHack: false and already carry
+  // their own cover url (see customGames.ts), so they're resolved from the
+  // tiny local list instead of a database that doesn't have them at all.
   const baseEntryIds = useMemo(
     () => entries.filter((entry) => !isCustomGameId(entry.id)).map((entry) => entry.id),
     [entries]
   );
-  const [modFlagsById, setModFlagsById] = useState<Map<string, boolean>>(new Map());
+  const [baseGames, setBaseGames] = useState<GameRecord[]>([]);
   const [gamesHydrated, setGamesHydrated] = useState(false);
 
   useEffect(() => {
     if (baseEntryIds.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setModFlagsById(new Map());
+      setBaseGames([]);
       setGamesHydrated(true);
       return;
     }
@@ -66,21 +68,29 @@ export function LibraryBrowser() {
     fetch(`/api/games/by-ids?ids=${baseEntryIds.join(",")}`)
       .then((res) => res.json())
       .then((games: GameRecord[]) => {
-        if (cancelled) return;
-        setModFlagsById(new Map(games.map((game) => [game.id, game.isModOrHack])));
-        setGamesHydrated(true);
+        if (!cancelled) {
+          setBaseGames(games);
+          setGamesHydrated(true);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, [baseEntryIds]);
 
+  const catalogById = useMemo(() => {
+    const map = new Map<string, GameRecord>();
+    for (const game of baseGames) map.set(game.id, game);
+    for (const game of customGames) map.set(game.id, game);
+    return map;
+  }, [baseGames, customGames]);
+
   const filtered = useMemo(() => {
     let eligible = statusFilter ? entries.filter((entry) => entry.status === statusFilter) : entries;
     if (source === "base") eligible = eligible.filter((entry) => !isCustomGameId(entry.id));
     else if (source === "custom") eligible = eligible.filter((entry) => isCustomGameId(entry.id));
     if (!includeMods) {
-      eligible = eligible.filter((entry) => !modFlagsById.get(entry.id));
+      eligible = eligible.filter((entry) => !catalogById.get(entry.id)?.isModOrHack);
     }
     if (isRatingSort(sort)) {
       const searched = filterAndSortByCatalog(eligible, { search, console: consoleFilter });
@@ -91,7 +101,7 @@ export function LibraryBrowser() {
       return sortByDateAdded(searched, sort);
     }
     return filterAndSortByCatalog(eligible, { search, console: consoleFilter, sort });
-  }, [entries, statusFilter, source, includeMods, search, consoleFilter, sort, modFlagsById]);
+  }, [entries, statusFilter, source, includeMods, search, consoleFilter, sort, catalogById]);
 
   const { items: results, count } = paginate(filtered, page, LIBRARY_PAGE_SIZE);
   const totalPages = Math.max(1, Math.ceil(count / LIBRARY_PAGE_SIZE));
@@ -160,7 +170,11 @@ export function LibraryBrowser() {
       ) : (
         <div className="mt-6 flex flex-col gap-4">
           {results.map((entry) => (
-            <LibraryEntryRow key={`${entry.id}:${entry.notes}`} entry={entry} />
+            <LibraryEntryRow
+              key={`${entry.id}:${entry.notes}`}
+              entry={entry}
+              catalogGame={catalogById.get(entry.id)}
+            />
           ))}
         </div>
       )}

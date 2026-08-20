@@ -22,6 +22,7 @@ import {
 import type { LibraryEntry } from "@/lib/library";
 import type { GameRecord } from "@/lib/types";
 import { normalizeForSearch } from "@/lib/catalogSearch";
+import { igdbCoverSmall } from "@/lib/igdbImage";
 import { StatusPole } from "@/components/StatusPole";
 
 export function ListDetailView({ id }: { id: string }) {
@@ -253,7 +254,7 @@ export function ListDetailView({ id }: { id: string }) {
             const libraryEntry = libraryById.get(entry.gameId);
             const catalogGame = catalogById.get(entry.gameId);
             const title = catalogGame?.title ?? libraryEntry?.title ?? entry.gameId;
-            const coverUrl = catalogGame?.coverUrl ?? null;
+            const coverUrl = igdbCoverSmall(catalogGame?.coverUrl);
 
             return (
               <div
@@ -285,7 +286,9 @@ export function ListDetailView({ id }: { id: string }) {
                   href={`/game/${entry.gameId}`}
                   className="relative h-14 w-10 flex-shrink-0 overflow-hidden rounded bg-zinc-800"
                 >
-                  {coverUrl && <Image src={coverUrl} alt={title} fill className="object-cover" sizes="40px" />}
+                  {coverUrl && (
+                    <Image src={coverUrl} alt={title} fill unoptimized className="object-cover" sizes="40px" />
+                  )}
                 </Link>
 
                 <Link href={`/game/${entry.gameId}`} className="flex-1 text-sm text-zinc-100 hover:underline">

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { DATA_REFRESH_INTERVAL_SECONDS } from "./src/lib/dataRefreshCadence";
 
 const nextConfig: NextConfig = {
   images: {
@@ -12,6 +13,11 @@ const nextConfig: NextConfig = {
         hostname: "**",
       },
     ],
+    // Cover art only changes when the catalog is re-ingested, so there's no
+    // reason to let Vercel's image cache (and the metered Image
+    // Optimization Transformation it costs on every miss) expire faster
+    // than the data itself does - see dataRefreshCadence.ts.
+    minimumCacheTTL: DATA_REFRESH_INTERVAL_SECONDS,
   },
 };
 
