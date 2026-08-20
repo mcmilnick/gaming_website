@@ -1,36 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
 import { PAGE_SIZE } from "@/lib/games";
-import type { GameRecord } from "@/lib/types";
-
-type GameRow = {
-  id: string;
-  title: string;
-  console: string;
-  developer: string | null;
-  publisher: string | null;
-  release_year: number | null;
-  release_month: number | null;
-  cover_url: string | null;
-  is_mod_or_hack: boolean;
-};
-
-function toGameRecord(row: GameRow): GameRecord {
-  return {
-    id: row.id,
-    title: row.title,
-    console: row.console,
-    developer: row.developer,
-    publisher: row.publisher,
-    releaseJapan: null,
-    releaseNA: null,
-    releasePAL: null,
-    releaseYear: row.release_year,
-    releaseMonth: row.release_month,
-    coverUrl: row.cover_url,
-    isModOrHack: row.is_mod_or_hack,
-  };
-}
+import { GAME_COLUMNS, toGameRecord, type GameRow } from "@/lib/gameRow";
 
 // Mirrors catalogSearch.ts's releaseSortValue tie-breaking (year+month, missing
 // year sorts last either direction) and falls back to title as a secondary
@@ -79,7 +50,7 @@ export async function GET(request: Request) {
 
   const itemsParams = [...params, PAGE_SIZE, offset];
   const itemsQuery = `
-    SELECT id, title, console, developer, publisher, release_year, release_month, cover_url, is_mod_or_hack
+    SELECT ${GAME_COLUMNS}
     FROM games
     ${whereClause}
     ORDER BY ${orderClause}

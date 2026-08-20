@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLists } from "@/hooks/useLists";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useCustomGames } from "@/hooks/useCustomGames";
-import { useGames } from "@/hooks/useGames";
+import { isCustomGameId } from "@/lib/customGames";
 import {
   addEntryToList,
   deleteList,
@@ -28,7 +28,6 @@ export function ListDetailView({ id }: { id: string }) {
   const { lists, hydrated } = useLists();
   const { entries: libraryEntries } = useLibrary();
   const { games: customGames } = useCustomGames();
-  const { games: catalogGames, hydrated: gamesHydrated } = useGames();
   const router = useRouter();
   const [addQuery, setAddQuery] = useState("");
   const [nameDraft, setNameDraft] = useState<string | null>(null);
@@ -43,14 +42,45 @@ export function ListDetailView({ id }: { id: string }) {
     for (const entry of libraryEntries) map.set(entry.id, entry);
     return map;
   }, [libraryEntries]);
-  // List entries only store a gameId - resolve the live catalog record to
-  // get cover art (Library snapshots don't carry it).
+
+  // A list only stores gameIds - this looks up just the games actually in
+  // this list (a small, known set), not the whole ~150k-game catalog, to
+  // get their cover art/title. Custom games are already available from
+  // localStorage and don't need fetching.
+  const baseEntryIds = useMemo(
+    () => (list ? list.entries.map((entry) => entry.gameId).filter((gameId) => !isCustomGameId(gameId)) : []),
+    [list]
+  );
+  const [baseGames, setBaseGames] = useState<GameRecord[]>([]);
+  const [gamesHydrated, setGamesHydrated] = useState(false);
+
+  useEffect(() => {
+    if (baseEntryIds.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBaseGames([]);
+      setGamesHydrated(true);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/games/by-ids?ids=${baseEntryIds.join(",")}`)
+      .then((res) => res.json())
+      .then((games: GameRecord[]) => {
+        if (!cancelled) {
+          setBaseGames(games);
+          setGamesHydrated(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [baseEntryIds]);
+
   const catalogById = useMemo(() => {
     const map = new Map<string, GameRecord>();
-    for (const game of catalogGames) map.set(game.id, game);
+    for (const game of baseGames) map.set(game.id, game);
     for (const game of customGames) map.set(game.id, game);
     return map;
-  }, [catalogGames, customGames]);
+  }, [baseGames, customGames]);
 
   const displayedEntries = useMemo(() => {
     if (!list) return [];
