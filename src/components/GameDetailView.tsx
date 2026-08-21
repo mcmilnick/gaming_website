@@ -169,14 +169,23 @@ export function GameDetailView({ id }: { id: string }) {
               {memberships.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {memberships.map(({ list, entry }) => (
-                    <Link
+                    <span
                       key={list.id}
-                      href={`/lists/${list.id}`}
-                      className="rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-xs text-zinc-300 hover:text-zinc-100 hover:underline"
+                      className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-xs text-zinc-300"
                     >
-                      {list.name}
-                      {entry.value ? `: ${entry.value}` : ""}
-                    </Link>
+                      <Link href={`/lists/${list.id}`} className="hover:text-zinc-100 hover:underline">
+                        {list.name}
+                        {entry.value ? `: ${entry.value}` : ""}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => removeEntryFromList(list.id, game.id)}
+                        aria-label={`Remove from ${list.name}`}
+                        className="text-zinc-500 hover:text-red-400"
+                      >
+                        ×
+                      </button>
+                    </span>
                   ))}
                 </div>
               )}
