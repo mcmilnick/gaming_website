@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
 import { PAGE_SIZE } from "@/lib/games";
+import { normalizeForSearch } from "@/lib/catalogSearch";
 import { GAME_COLUMNS, toGameRecord, type GameRow } from "@/lib/gameRow";
 
 // Mirrors catalogSearch.ts's releaseSortValue tie-breaking (year+month, missing
@@ -31,10 +32,18 @@ export async function GET(request: Request) {
   const params: unknown[] = [];
 
   if (search) {
+    // Match against normalized_title (accents stripped, punctuation/spaces
+    // stripped, lowercased - see the games_normalized_title_trgm_idx
+    // migration) using the same normalization the query itself gets, so
+    // "pokemon" finds "Pokémon" the same way the old client-side search did.
+    // Matching raw `title` here was the bug: SQL ILIKE is a literal
+    // substring match, so an unaccented "pokemon" search never matched the
+    // 1000+ catalog titles that are actually spelled with an accent.
+    const normalizedSearch = normalizeForSearch(search);
     // Escape LIKE's own wildcard characters so a literal "%" or "_" typed
     // into the search box is matched literally, not as a wildcard.
-    params.push(`%${search.replace(/[%_]/g, "\\$&")}%`);
-    conditions.push(`title ILIKE $${params.length}`);
+    params.push(`%${normalizedSearch.replace(/[%_]/g, "\\$&")}%`);
+    conditions.push(`normalized_title ILIKE $${params.length}`);
   }
   if (consoleFilter) {
     params.push(consoleFilter);

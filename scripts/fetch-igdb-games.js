@@ -125,6 +125,20 @@ function slugify(text) {
     .replace(/^-+|-+$/g, "");
 }
 
+// Must stay byte-for-byte identical to normalizeForSearch in
+// src/lib/catalogSearch.ts - that's what the search route normalizes an
+// incoming query with before matching it against this column. If the two
+// drift apart, accented/punctuated titles (which is most of the reason this
+// column exists - "pokemon" needs to find "Pokémon") silently stop matching
+// again, the same bug this column was added to fix.
+function normalizeForSearch(text) {
+  return text
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^\p{L}\p{N}]/gu, "")
+    .toLowerCase();
+}
+
 async function getAccessToken() {
   const url = `https://id.twitch.tv/oauth2/token?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&grant_type=client_credentials`;
   const res = await fetch(url, { method: "POST" });
@@ -247,6 +261,7 @@ function mapGame(igdbGame, platformName) {
   return {
     id: `igdb-${igdbGame.id}-${slugify(platformName)}`,
     title: igdbGame.name,
+    normalizedTitle: normalizeForSearch(igdbGame.name),
     console: platformName,
     developer,
     publisher,
@@ -281,10 +296,11 @@ async function writeToDatabase(games) {
       const chunk = games.slice(i, i + DB_CHUNK_SIZE);
       const values = [];
       const rows = chunk.map((game, idx) => {
-        const base = idx * 9;
+        const base = idx * 10;
         values.push(
           game.id,
           game.title,
+          game.normalizedTitle,
           game.console,
           game.developer,
           game.publisher,
@@ -293,12 +309,12 @@ async function writeToDatabase(games) {
           game.coverUrl,
           game.isModOrHack
         );
-        const placeholders = Array.from({ length: 9 }, (_, j) => `$${base + j + 1}`).join(", ");
+        const placeholders = Array.from({ length: 10 }, (_, j) => `$${base + j + 1}`).join(", ");
         return `(${placeholders})`;
       });
 
       await client.query(
-        `INSERT INTO games (id, title, console, developer, publisher, release_year, release_month, cover_url, is_mod_or_hack)
+        `INSERT INTO games (id, title, normalized_title, console, developer, publisher, release_year, release_month, cover_url, is_mod_or_hack)
          VALUES ${rows.join(", ")}`,
         values
       );
