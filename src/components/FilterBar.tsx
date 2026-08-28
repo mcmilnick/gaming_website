@@ -89,7 +89,7 @@ export function FilterBar<S extends string>({
           />
 
           <select
-            defaultValue={currentStatus}
+            value={currentStatus}
             onChange={(e) => navigate({ status: e.target.value })}
             className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
           >
@@ -106,7 +106,7 @@ export function FilterBar<S extends string>({
           <label className="flex items-center gap-2 text-sm text-zinc-300">
             <input
               type="checkbox"
-              defaultChecked={currentIncludeMods}
+              checked={currentIncludeMods}
               onChange={(e) => navigate({ includeMods: e.target.checked ? "1" : "" })}
             />
             Include Mods/Hacks
@@ -116,7 +116,7 @@ export function FilterBar<S extends string>({
             <label className="flex items-center gap-2 text-sm text-zinc-300">
               <input
                 type="checkbox"
-                defaultChecked={currentHideInLibrary}
+                checked={currentHideInLibrary}
                 onChange={(e) => navigate({ hideInLibrary: e.target.checked ? "1" : "" })}
               />
               Hide games already in my library
