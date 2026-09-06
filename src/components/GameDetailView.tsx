@@ -86,7 +86,7 @@ export function GameDetailView({ id }: { id: string }) {
               </span>
             )}
             {game.coverUrl ? (
-              <Image src={game.coverUrl} alt={game.title} fill className="object-cover" sizes="240px" />
+              <Image src={game.coverUrl} alt={game.title} fill unoptimized className="object-cover" sizes="240px" />
             ) : (
               <>
                 <span className="text-5xl">🎮</span>
