@@ -24,6 +24,7 @@ import type { GameRecord } from "@/lib/types";
 import { normalizeForSearch } from "@/lib/catalogSearch";
 import { igdbCoverSmall } from "@/lib/igdbImage";
 import { StatusPole } from "@/components/StatusPole";
+import { BackLink } from "@/components/BackLink";
 
 export function ListDetailView({ id }: { id: string }) {
   const { lists, hydrated } = useLists();
@@ -106,9 +107,9 @@ export function ListDetailView({ id }: { id: string }) {
       <div className="mx-auto max-w-xl px-4 py-24 text-center">
         <h1 className="text-xl font-semibold text-zinc-100">List not found</h1>
         <p className="mt-3 text-sm text-zinc-400">
-          <Link href="/lists" className="underline hover:text-zinc-200">
+          <BackLink fallbackHref="/lists" className="underline hover:text-zinc-200">
             Back to My Lists
-          </Link>
+          </BackLink>
         </p>
       </div>
     );
@@ -145,9 +146,7 @@ export function ListDetailView({ id }: { id: string }) {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <Link href="/lists" className="text-sm text-zinc-400 hover:text-zinc-200">
-        &larr; Back to My Lists
-      </Link>
+      <BackLink fallbackHref="/lists">&larr; Back</BackLink>
 
       <div className="mt-2 flex items-center justify-between gap-4">
         <input

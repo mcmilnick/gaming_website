@@ -15,6 +15,7 @@ import { LibraryButton } from "@/components/LibraryButton";
 import { CopyListTagsButton } from "@/components/CopyListTagsButton";
 import { AddToListSelect } from "@/components/AddToListSelect";
 import { NotesEditor } from "@/components/NotesEditor";
+import { BackLink } from "@/components/BackLink";
 
 function regions(game: { releaseJapan: string | null; releaseNA: string | null; releasePAL: string | null }) {
   return [
@@ -63,9 +64,9 @@ export function GameDetailView({ id }: { id: string }) {
       <div className="mx-auto max-w-xl px-4 py-24 text-center">
         <h1 className="text-xl font-semibold text-zinc-100">Game not found</h1>
         <p className="mt-3 text-sm text-zinc-400">
-          <Link href="/" className="underline hover:text-zinc-200">
+          <BackLink fallbackHref="/" className="underline hover:text-zinc-200">
             Back to All Games
-          </Link>
+          </BackLink>
         </p>
       </div>
     );
@@ -73,9 +74,7 @@ export function GameDetailView({ id }: { id: string }) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <Link href="/" className="text-sm text-zinc-400 hover:text-zinc-200">
-        &larr; Back to All Games
-      </Link>
+      <BackLink fallbackHref="/">&larr; Back</BackLink>
 
       <div className="mt-4 grid gap-6 sm:grid-cols-[240px_1fr]">
         <div>
