@@ -113,6 +113,33 @@ export function addEntryToList(listId: string, gameId: string, value: string | n
   store.writeAll(next);
 }
 
+// Bulk version of addEntryToList - e.g. "add all search results to a list"
+// from the Library page, which could mean hundreds of games at once.
+// Deliberately not just calling addEntryToList in a loop: that would mean
+// one localStorage write (and one change-event, and one re-render across
+// every subscribed component) per game. This does a single read, computes
+// every update in memory, and writes once. Games already in the list are
+// skipped rather than upserted, so a bulk-add can't accidentally wipe out
+// an existing entry's custom `value` field back to null.
+export function addEntriesToList(listId: string, gameIds: string[]): void {
+  const lists = store.readAll();
+  const index = lists.findIndex((list) => list.id === listId);
+  if (index === -1) return;
+
+  const list = lists[index];
+  const existingIds = new Set(list.entries.map((entry) => entry.gameId));
+  const now = new Date().toISOString();
+  const newEntries: ListEntry[] = gameIds
+    .filter((gameId) => !existingIds.has(gameId))
+    .map((gameId) => ({ gameId, value: null, addedAt: now }));
+
+  if (newEntries.length === 0) return;
+
+  const next = [...lists];
+  next[index] = { ...list, entries: [...list.entries, ...newEntries], updatedAt: now };
+  store.writeAll(next);
+}
+
 export function removeEntryFromList(listId: string, gameId: string): void {
   const lists = store.readAll();
   const index = lists.findIndex((list) => list.id === listId);

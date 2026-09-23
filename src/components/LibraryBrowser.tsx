@@ -19,6 +19,7 @@ import { isCustomGameId } from "@/lib/customGames";
 import type { GameRecord } from "@/lib/types";
 import { FilterBar } from "@/components/FilterBar";
 import { LibraryEntryRow } from "@/components/LibraryEntryRow";
+import { AddAllToListSelect } from "@/components/AddAllToListSelect";
 import { Panel } from "@/components/Panel";
 import { Pagination } from "@/components/Pagination";
 
@@ -164,6 +165,12 @@ export function LibraryBrowser() {
           currentStatus={statusFilter}
         />
       </Panel>
+
+      {filtered.length > 0 && (
+        <div className="mt-4">
+          <AddAllToListSelect gameIds={filtered.map((entry) => entry.id)} />
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <p className="mt-12 text-center text-zinc-500">No library entries matched your filters.</p>
