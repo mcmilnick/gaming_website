@@ -1,10 +1,10 @@
 import type { GameRecord } from "./types";
 import { filterAndSortByCatalog, type CatalogFilters } from "./catalogSearch";
 
-// The catalog itself is no longer imported here - it's fetched at runtime
-// from /api/games (see gamesStore.ts / useGames()) instead of being bundled
-// into the app's JS. Everything in this file operates on a games array
-// passed in by the caller.
+// The catalog itself is not imported here - it lives in the database and is
+// queried at runtime (see /api/games/search and /api/games/by-ids) instead of
+// being bundled into the app's JS. Everything in this file operates on a
+// games array passed in by the caller.
 
 // Divisible by 2, 3, 4, and 5 - the grid's column count at every
 // breakpoint (see ExploreBrowser's grid-cols-2/3/4/5) - so the last row of

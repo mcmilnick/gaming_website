@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useGames } from "@/hooks/useGames";
+import { useGamesByIds } from "@/hooks/useGamesByIds";
 import { formatReleaseDate } from "@/lib/catalogSearch";
 import { isCustomGameId, removeCustomGame } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
@@ -26,7 +26,7 @@ function regions(game: { releaseJapan: string | null; releaseNA: string | null; 
 }
 
 export function GameDetailView({ id }: { id: string }) {
-  const { gamesById, hydrated: gamesHydrated } = useGames();
+  const { byId: gamesById, hydrated: gamesHydrated } = useGamesByIds(isCustomGameId(id) ? [] : [id]);
   const baseGame = gamesById.get(id);
   const { games: customGames, hydrated: customGamesHydrated } = useCustomGames();
   const { lists } = useLists();

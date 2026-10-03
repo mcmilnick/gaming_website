@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLibrary } from "@/hooks/useLibrary";
-import { useGames } from "@/hooks/useGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
+import { useCatalogConsoles } from "@/hooks/useCatalogConsoles";
 import { getDistinctConsoles, normalizeForSearch } from "@/lib/catalogSearch";
+import type { GameRecord } from "@/lib/types";
 import { getStoredApiKey, setStoredApiKey, suggestGame, MODEL_ID, type TokenUsage } from "@/lib/aiSuggest";
 import { Panel } from "@/components/Panel";
 import { GameCard } from "@/components/GameCard";
@@ -26,8 +27,12 @@ function parseSuggestedConsole(text: string): string | null {
 
 export function SuggestGame() {
   const { entries, hydrated } = useLibrary();
-  const { games } = useGames();
+  const { consoles: catalogConsoles } = useCatalogConsoles();
   const { games: customGames } = useCustomGames();
+  // Exact-title matches for Gemini's suggestion, fetched from the database
+  // as soon as a suggestion comes back. Tagged with the title they belong
+  // to, so a stale result never shows under a newer suggestion.
+  const [titleMatches, setTitleMatches] = useState<{ title: string; items: GameRecord[] } | null>(null);
   const [apiKey, setApiKey] = useState(() => getStoredApiKey());
   const [includeRatings, setIncludeRatings] = useState(false);
   const [sourceConsole, setSourceConsole] = useState("");
@@ -38,22 +43,34 @@ export function SuggestGame() {
   const [error, setError] = useState<string | null>(null);
 
   const consoles = useMemo(() => getDistinctConsoles(entries), [entries]);
-  const catalogConsoles = useMemo(() => getDistinctConsoles(games), [games]);
 
   const sourceEntries = useMemo(
     () => (sourceConsole ? entries.filter((entry) => entry.console === sourceConsole) : entries),
     [entries, sourceConsole]
   );
 
+  const suggestedTitle = result ? parseSuggestedTitle(result) : null;
+
+  useEffect(() => {
+    if (!suggestedTitle) return;
+    let cancelled = false;
+    fetch(`/api/games/search?search=${encodeURIComponent(suggestedTitle)}&exact=1&includeMods=1&page=1`)
+      .then((res) => res.json())
+      .then((data: { items: GameRecord[] }) => {
+        if (!cancelled) setTitleMatches({ title: suggestedTitle, items: data.items });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [suggestedTitle]);
+
   const matchedGame = useMemo(() => {
-    if (!result) return null;
-    const suggestedTitle = parseSuggestedTitle(result);
-    if (!suggestedTitle) return null;
+    if (!result || !suggestedTitle || titleMatches?.title !== suggestedTitle) return null;
     const normalizedTitle = normalizeForSearch(suggestedTitle);
     const suggestedConsole = parseSuggestedConsole(result);
     const normalizedConsole = suggestedConsole ? normalizeForSearch(suggestedConsole) : null;
 
-    const candidates = [...games, ...customGames].filter(
+    const candidates = [...titleMatches.items, ...customGames].filter(
       (game) => normalizeForSearch(game.title) === normalizedTitle
     );
     if (candidates.length === 0) return null;
@@ -65,7 +82,7 @@ export function SuggestGame() {
     // (Gemini didn't use one of the exact names it was given, or the game
     // isn't actually in the catalog under that platform).
     return candidates[0];
-  }, [result, games, customGames]);
+  }, [result, suggestedTitle, titleMatches, customGames]);
 
   function handleApiKeyChange(value: string) {
     setApiKey(value);

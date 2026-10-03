@@ -6,7 +6,7 @@ import { PAGE_SIZE, filterAndSortGames, paginate } from "@/lib/games";
 import { parseSortParam, getDistinctConsoles, compareForSort, SORT_OPTIONS, type SortOption } from "@/lib/catalogSearch";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useCustomGames } from "@/hooks/useCustomGames";
-import { useGames } from "@/hooks/useGames";
+import { useCatalogConsoles } from "@/hooks/useCatalogConsoles";
 import type { GameRecord } from "@/lib/types";
 import { GameCard } from "./GameCard";
 import { FilterBar } from "./FilterBar";
@@ -45,9 +45,8 @@ type SharedParams = {
   page: number;
 };
 
-// The shell every mode below renders into, so the two data-fetching
-// strategies can never visually drift apart - only what feeds `results`,
-// `count`, and `consoles` differs between them.
+// The shell every result set renders into, so the layout can't drift from
+// one data path to another - only what feeds `results` and `count` differs.
 function ExploreLayout({
   params,
   consoles,
@@ -118,107 +117,65 @@ function ExploreLayout({
   );
 }
 
-// "Hide games already in my library" and the status filter both depend on
-// your local library data, which the database can't see (no accounts, no
-// server-side notion of "you"). Rather than force that into a SQL query,
-// this mode keeps today's original approach: load the full catalog once and
-// filter/sort/paginate it in memory. It's the slower path, but it's an
-// opt-in combination, not the default experience.
-function ExploreFullCatalogMode({ params }: { params: SharedParams }) {
+// Search, console, sort, and pagination run as indexed queries in the
+// database, so the browser never downloads the whole catalog. Two things
+// the database can't see - your local Library ("hide games in my library"
+// and the status filter) - are sent along as id lists: POST when they're
+// in use (the lists can be long), GET otherwise.
+//
+// Custom (user-added) games aren't in that database - they live in this
+// browser's localStorage - so they're matched against the same filters
+// client-side (cheap, there are never many) and merged onto page 1 only.
+function ExploreResults({ params }: { params: SharedParams }) {
+  const { search, consoleFilter, sort, source, includeMods, statusFilter, hideInLibrary, page } = params;
   const { entries } = useLibrary();
   const { games: customGames } = useCustomGames();
-  const { games: allGames, hydrated: gamesHydrated } = useGames();
+  const { consoles: baseConsoles } = useCatalogConsoles();
+  const [serverResult, setServerResult] = useState<{ items: GameRecord[]; count: number } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const libraryIds = useMemo(() => new Set(entries.map((entry) => entry.id)), [entries]);
+  const libraryIds = useMemo(() => entries.map((entry) => entry.id), [entries]);
+  const libraryIdSet = useMemo(() => new Set(libraryIds), [libraryIds]);
   const libraryStatusById = useMemo(
     () => new Map(entries.map((entry) => [entry.id, entry.status])),
     [entries]
   );
-  const consoles = useMemo(() => getDistinctConsoles(allGames), [allGames]);
-
-  const sourceGames = useMemo(() => {
-    switch (params.source) {
-      case "custom":
-        return customGames;
-      case "all":
-        return [...allGames, ...customGames];
-      case "base":
-      default:
-        return allGames;
-    }
-  }, [params.source, customGames, allGames]);
-
-  const filtered = useMemo(() => {
-    const base = filterAndSortGames(sourceGames, {
-      search: params.search,
-      console: params.consoleFilter,
-      sort: params.sort,
-      includeMods: params.includeMods,
-      excludeIds: params.hideInLibrary ? libraryIds : undefined,
-    });
-    if (!params.statusFilter) return base;
-    return base.filter((game) => libraryStatusById.get(game.id) === params.statusFilter);
-  }, [sourceGames, params, libraryIds, libraryStatusById]);
-
-  const { items: results, count } = paginate(filtered, params.page, PAGE_SIZE);
-
-  return (
-    <ExploreLayout params={params} consoles={consoles} count={count} results={results} loading={!gamesHydrated} />
+  const statusIds = useMemo(
+    () => (statusFilter ? entries.filter((entry) => entry.status === statusFilter).map((entry) => entry.id) : null),
+    [entries, statusFilter]
   );
-}
-
-// The fast path: search/console-filter/sort/pagination run as real indexed
-// queries in the database instead of filtering the whole ~150k-game catalog
-// in the browser. Custom (user-added) games aren't in that database - they
-// live in this browser's localStorage - so they're matched against the same
-// filters client-side (cheap, there are never many) and merged onto page 1
-// only, rather than solving "one seamlessly sorted/paginated list across two
-// different-latency sources," which isn't worth the complexity for what's
-// usually 0-10 extra games.
-function ExploreFastSearchMode({ params }: { params: SharedParams }) {
-  const { games: customGames } = useCustomGames();
-  const [baseConsoles, setBaseConsoles] = useState<string[]>([]);
-  const [serverResult, setServerResult] = useState<{ items: GameRecord[]; count: number } | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Fetched once - the base catalog's console list changes rarely (only
-  // when platforms are added). Custom consoles are merged in reactively
-  // below instead of being folded in here, so adding a game with a new
-  // console (e.g. "PC") shows up in the dropdown right away, not just after
-  // the next full page load.
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/consoles")
-      .then((res) => res.json())
-      .then((data: string[]) => {
-        if (!cancelled) setBaseConsoles(data);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const consoles = useMemo(() => {
     const customConsoles = getDistinctConsoles(customGames);
     return Array.from(new Set([...baseConsoles, ...customConsoles])).sort((a, b) => a.localeCompare(b));
   }, [baseConsoles, customGames]);
 
-  // Re-fetches whenever the search/filter/sort/page params change - syncing
+  // Re-fetches whenever the search/filter/sort/page values change. Syncing
   // fetched state from changing props is one of the legitimate uses of an
   // effect (React's own docs call this out), hence the lint override below.
   useEffect(() => {
-    if (params.source === "custom") return;
+    if (source === "custom") return;
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    const query = new URLSearchParams();
-    if (params.search) query.set("search", params.search);
-    if (params.consoleFilter) query.set("console", params.consoleFilter);
-    if (params.sort) query.set("sort", params.sort);
-    if (params.includeMods) query.set("includeMods", "1");
-    query.set("page", String(params.page));
 
-    fetch(`/api/games/search?${query.toString()}`)
+    const request = hideInLibrary || statusIds !== null
+      ? fetch("/api/games/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            search,
+            console: consoleFilter,
+            sort,
+            includeMods,
+            page,
+            excludeIds: hideInLibrary ? libraryIds : undefined,
+            includeIds: statusIds ?? undefined,
+          }),
+        })
+      : fetch(`/api/games/search?${buildSearchQuery({ search, consoleFilter, sort, includeMods, page })}`);
+
+    request
       .then((res) => res.json())
       .then((data: { items: GameRecord[]; count: number }) => {
         if (!cancelled) setServerResult(data);
@@ -229,34 +186,41 @@ function ExploreFastSearchMode({ params }: { params: SharedParams }) {
     return () => {
       cancelled = true;
     };
-  }, [params.source, params.search, params.consoleFilter, params.sort, params.includeMods, params.page]);
+  }, [source, search, consoleFilter, sort, includeMods, page, hideInLibrary, statusIds, libraryIds]);
 
+  // Same rule the database query applies, for the custom games in memory.
   const matchedCustomGames = useMemo(() => {
-    if (params.source === "base") return [];
-    return filterAndSortGames(customGames, {
-      search: params.search,
-      console: params.consoleFilter,
-      sort: params.sort,
-      includeMods: params.includeMods,
+    if (source === "base") return [];
+    return filterAndSortGames(customGames, { search, console: consoleFilter, sort, includeMods }).filter((game) => {
+      if (hideInLibrary && libraryIdSet.has(game.id)) return false;
+      if (statusFilter && libraryStatusById.get(game.id) !== statusFilter) return false;
+      return true;
     });
-  }, [customGames, params.source, params.search, params.consoleFilter, params.sort, params.includeMods]);
+  }, [customGames, source, search, consoleFilter, sort, includeMods, hideInLibrary, statusFilter, libraryIdSet, libraryStatusById]);
 
-  if (params.source === "custom") {
-    const { items: results, count } = paginate(matchedCustomGames, params.page, PAGE_SIZE);
+  if (source === "custom") {
+    const { items: results, count } = paginate(matchedCustomGames, page, PAGE_SIZE);
     return <ExploreLayout params={params} consoles={consoles} count={count} results={results} loading={false} />;
   }
 
   const serverItems = serverResult?.items ?? [];
   const serverCount = serverResult?.count ?? 0;
-  const results =
-    params.page === 1
-      ? mergeSorted(matchedCustomGames, serverItems, params.sort, PAGE_SIZE)
-      : serverItems;
+  const results = page === 1 ? mergeSorted(matchedCustomGames, serverItems, sort, PAGE_SIZE) : serverItems;
   const count = serverCount + matchedCustomGames.length;
 
   return (
     <ExploreLayout params={params} consoles={consoles} count={count} results={results} loading={loading} />
   );
+}
+
+function buildSearchQuery(params: Pick<SharedParams, "search" | "consoleFilter" | "sort" | "includeMods" | "page">): string {
+  const query = new URLSearchParams();
+  if (params.search) query.set("search", params.search);
+  if (params.consoleFilter) query.set("console", params.consoleFilter);
+  if (params.sort) query.set("sort", params.sort);
+  if (params.includeMods) query.set("includeMods", "1");
+  query.set("page", String(params.page));
+  return query.toString();
 }
 
 export function ExploreBrowser() {
@@ -286,11 +250,5 @@ export function ExploreBrowser() {
     page,
   };
 
-  // hideInLibrary/statusFilter need local library data the database can't
-  // see - that combination stays on the full-catalog path (see comment on
-  // ExploreFullCatalogMode). Everything else takes the fast, paginated path.
-  if (hideInLibrary || statusFilter) {
-    return <ExploreFullCatalogMode params={params} />;
-  }
-  return <ExploreFastSearchMode params={params} />;
+  return <ExploreResults params={params} />;
 }

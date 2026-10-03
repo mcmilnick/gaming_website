@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useGames } from "@/hooks/useGames";
-import { addCustomGame } from "@/lib/customGames";
+import { useGamesByIds } from "@/hooks/useGamesByIds";
+import { addCustomGame, isCustomGameId } from "@/lib/customGames";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { normalizeForSearch } from "@/lib/catalogSearch";
 import { igdbCoverSmall } from "@/lib/igdbImage";
@@ -21,19 +21,41 @@ const EMPTY_FORM = {
 
 export function AddGamesForm() {
   const { games, hydrated } = useCustomGames();
-  const { games: catalogGames, hydrated: catalogHydrated } = useGames();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState(EMPTY_FORM);
   const [copyQuery, setCopyQuery] = useState("");
   const [coverPreviewFailed, setCoverPreviewFailed] = useState(false);
 
-  const combinedGames = useMemo(() => [...catalogGames, ...games], [catalogGames, games]);
+  // The copy-from search asks the database as you type (after a short pause)
+  // instead of loading the whole catalog to filter in the browser. Results
+  // are tagged with the query they belong to, so old results never show
+  // under a newer query.
+  const trimmedQuery = copyQuery.trim();
+  const [catalogMatches, setCatalogMatches] = useState<{ query: string; items: GameRecord[] } | null>(null);
+  useEffect(() => {
+    if (!trimmedQuery) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      fetch(`/api/games/search?search=${encodeURIComponent(trimmedQuery)}&includeMods=1&page=1`)
+        .then((res) => res.json())
+        .then((data: { items: GameRecord[] }) => {
+          if (!cancelled) setCatalogMatches({ query: trimmedQuery, items: data.items });
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [trimmedQuery]);
+
   const copyResults = useMemo(() => {
-    const query = normalizeForSearch(copyQuery.trim());
-    if (!query) return [];
-    return combinedGames.filter((game) => normalizeForSearch(game.title).includes(query)).slice(0, 8);
-  }, [combinedGames, copyQuery]);
+    if (!trimmedQuery) return [];
+    const query = normalizeForSearch(trimmedQuery);
+    const catalogItems = catalogMatches?.query === trimmedQuery ? catalogMatches.items : [];
+    const customItems = games.filter((game) => normalizeForSearch(game.title).includes(query));
+    return [...catalogItems, ...customItems].slice(0, 8);
+  }, [trimmedQuery, catalogMatches, games]);
 
   function handleCopyFrom(game: GameRecord) {
     setForm({
@@ -56,15 +78,19 @@ export function AddGamesForm() {
   // it doesn't re-fire the prefill if the user navigates back here later.
   // Syncing form state from a URL param is one of the legitimate uses of an
   // effect (React's own docs call this out) - hence the lint override below.
+  const copyFromId = searchParams.get("copyFrom") ?? "";
+  const { byId: copyFromCatalog, hydrated: catalogHydrated } = useGamesByIds(
+    copyFromId && !isCustomGameId(copyFromId) ? [copyFromId] : []
+  );
+
   useEffect(() => {
-    const copyFromId = searchParams.get("copyFrom");
     if (!copyFromId || !catalogHydrated || !hydrated) return;
-    const source = combinedGames.find((candidate) => candidate.id === copyFromId);
+    const source = copyFromCatalog.get(copyFromId) ?? games.find((candidate) => candidate.id === copyFromId);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (source) handleCopyFrom(source);
     router.replace("/add-games");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, catalogHydrated, hydrated, combinedGames]);
+  }, [copyFromId, catalogHydrated, hydrated, copyFromCatalog, games]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
