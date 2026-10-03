@@ -132,7 +132,6 @@ function ExploreResults({ params }: { params: SharedParams }) {
   const { games: customGames } = useCustomGames();
   const { consoles: baseConsoles } = useCatalogConsoles();
   const [serverResult, setServerResult] = useState<{ items: GameRecord[]; count: number } | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const libraryIds = useMemo(() => entries.map((entry) => entry.id), [entries]);
   const libraryIdSet = useMemo(() => new Set(libraryIds), [libraryIds]);
@@ -150,16 +149,20 @@ function ExploreResults({ params }: { params: SharedParams }) {
     return Array.from(new Set([...baseConsoles, ...customConsoles])).sort((a, b) => a.localeCompare(b));
   }, [baseConsoles, customGames]);
 
-  // Re-fetches whenever the search/filter/sort/page values change. Syncing
+  // The Library id lists only matter when a Library filter is on, so they're
+  // reduced to a string key here. That way adding a game to your Library
+  // (which changes the lists) doesn't re-run the search unless it affects it.
+  const excludeKey = hideInLibrary ? JSON.stringify(libraryIds) : "";
+  const includeKey = statusIds ? JSON.stringify(statusIds) : null;
+
+  // Re-fetches when the search/filter/sort/page values change. Syncing
   // fetched state from changing props is one of the legitimate uses of an
   // effect (React's own docs call this out), hence the lint override below.
   useEffect(() => {
     if (source === "custom") return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
 
-    const request = hideInLibrary || statusIds !== null
+    const request = hideInLibrary || includeKey !== null
       ? fetch("/api/games/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -169,8 +172,8 @@ function ExploreResults({ params }: { params: SharedParams }) {
             sort,
             includeMods,
             page,
-            excludeIds: hideInLibrary ? libraryIds : undefined,
-            includeIds: statusIds ?? undefined,
+            excludeIds: hideInLibrary ? (JSON.parse(excludeKey) as string[]) : undefined,
+            includeIds: includeKey !== null ? (JSON.parse(includeKey) as string[]) : undefined,
           }),
         })
       : fetch(`/api/games/search?${buildSearchQuery({ search, consoleFilter, sort, includeMods, page })}`);
@@ -179,14 +182,12 @@ function ExploreResults({ params }: { params: SharedParams }) {
       .then((res) => res.json())
       .then((data: { items: GameRecord[]; count: number }) => {
         if (!cancelled) setServerResult(data);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [source, search, consoleFilter, sort, includeMods, page, hideInLibrary, statusIds, libraryIds]);
+    // excludeKey/includeKey stand in for libraryIds/statusIds (see above).
+  },[source, search, consoleFilter, sort, includeMods, page, hideInLibrary, includeKey, excludeKey]);
 
   // Same rule the database query applies, for the custom games in memory.
   const matchedCustomGames = useMemo(() => {
@@ -208,8 +209,17 @@ function ExploreResults({ params }: { params: SharedParams }) {
   const results = page === 1 ? mergeSorted(matchedCustomGames, serverItems, sort, PAGE_SIZE) : serverItems;
   const count = serverCount + matchedCustomGames.length;
 
+  // Only the first load shows "Loading…". Later searches keep the current
+  // results on screen until the new ones arrive, so the page doesn't shrink
+  // and jump to the top.
   return (
-    <ExploreLayout params={params} consoles={consoles} count={count} results={results} loading={loading} />
+    <ExploreLayout
+      params={params}
+      consoles={consoles}
+      count={count}
+      results={results}
+      loading={serverResult === null}
+    />
   );
 }
 
