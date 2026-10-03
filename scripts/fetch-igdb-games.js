@@ -1,6 +1,6 @@
 // Fetches games for a set of platforms from IGDB and loads them into the
-// `games` table in Postgres (see src/app/api/games/route.ts for the read
-// side), replacing whatever is there.
+// `games` table in Postgres (the read side is src/app/api/games/search and
+// src/app/api/games/by-ids), replacing whatever is there.
 //
 // Requires IGDB_CLIENT_ID and IGDB_CLIENT_SECRET (from a Twitch Developer
 // app: https://dev.twitch.tv/console/apps) and GAMES_DB_DATABASE_URL (from the Neon
@@ -68,10 +68,13 @@ const TARGET_PLATFORM_NAMES = [
   "Wii U",
   "Nintendo Switch",
 
-  // Retro + current-gen consoles/handhelds, deliberately excluding PC/Mac/
-  // Linux/home computers (PC alone would roughly triple the catalog on its
-  // own - see the growth estimate this list came from) and non-console
-  // oddities (VR, mobile, arcade, mainframes).
+  // Windows PC. Added on its own: it's the bulk of the PC catalog (~437k
+  // rows), so Linux, Mac, and other home computers stay out for now.
+  "PC (Microsoft Windows)",
+
+  // Retro + current-gen consoles/handhelds, deliberately excluding Mac/
+  // Linux/home computers and non-console oddities (VR, mobile, arcade,
+  // mainframes).
   "Sega Master System/Mark III",
   "Sega Game Gear",
   "Sega CD",
