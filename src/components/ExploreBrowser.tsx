@@ -126,12 +126,27 @@ function ExploreLayout({
 // Custom (user-added) games aren't in that database - they live in this
 // browser's localStorage - so they're matched against the same filters
 // client-side (cheap, there are never many) and merged onto page 1 only.
+// The last few search results, kept while the app is open. Going into a game
+// and back unmounts this page, so without this the list starts empty and
+// "Loading…" is shown - the page is too short for the browser to scroll back
+// to where you were. With it, the list is there immediately.
+const RESULT_CACHE_LIMIT = 30;
+type SearchResult = { items: GameRecord[]; count: number };
+const resultCache = new Map<string, SearchResult>();
+
+function rememberResult(key: string, result: SearchResult) {
+  resultCache.delete(key);
+  resultCache.set(key, result);
+  const oldest = resultCache.keys().next().value;
+  if (resultCache.size > RESULT_CACHE_LIMIT && oldest !== undefined) resultCache.delete(oldest);
+}
+
 function ExploreResults({ params }: { params: SharedParams }) {
   const { search, consoleFilter, sort, source, includeMods, statusFilter, hideInLibrary, page } = params;
   const { entries } = useLibrary();
   const { games: customGames } = useCustomGames();
   const { consoles: baseConsoles } = useCatalogConsoles();
-  const [serverResult, setServerResult] = useState<{ items: GameRecord[]; count: number } | null>(null);
+  const [serverResult, setServerResult] = useState<SearchResult | null>(null);
 
   const libraryIds = useMemo(() => entries.map((entry) => entry.id), [entries]);
   const libraryIdSet = useMemo(() => new Set(libraryIds), [libraryIds]);
@@ -154,6 +169,10 @@ function ExploreResults({ params }: { params: SharedParams }) {
   // (which changes the lists) doesn't re-run the search unless it affects it.
   const excludeKey = hideInLibrary ? JSON.stringify(libraryIds) : "";
   const includeKey = statusIds ? JSON.stringify(statusIds) : null;
+  const requestKey = JSON.stringify([search, consoleFilter, sort, includeMods, page, excludeKey, includeKey]);
+  // A remembered result for this exact search shows right away; a fresh
+  // fetch (below) replaces it if the data has changed.
+  const current = resultCache.get(requestKey) ?? serverResult;
 
   // Re-fetches when the search/filter/sort/page values change. Syncing
   // fetched state from changing props is one of the legitimate uses of an
@@ -180,14 +199,15 @@ function ExploreResults({ params }: { params: SharedParams }) {
 
     request
       .then((res) => res.json())
-      .then((data: { items: GameRecord[]; count: number }) => {
+      .then((data: SearchResult) => {
+        rememberResult(requestKey, data);
         if (!cancelled) setServerResult(data);
       });
     return () => {
       cancelled = true;
     };
     // excludeKey/includeKey stand in for libraryIds/statusIds (see above).
-  },[source, search, consoleFilter, sort, includeMods, page, hideInLibrary, includeKey, excludeKey]);
+  }, [source, search, consoleFilter, sort, includeMods, page, hideInLibrary, includeKey, excludeKey, requestKey]);
 
   // Same rule the database query applies, for the custom games in memory.
   const matchedCustomGames = useMemo(() => {
@@ -204,8 +224,8 @@ function ExploreResults({ params }: { params: SharedParams }) {
     return <ExploreLayout params={params} consoles={consoles} count={count} results={results} loading={false} />;
   }
 
-  const serverItems = serverResult?.items ?? [];
-  const serverCount = serverResult?.count ?? 0;
+  const serverItems = current?.items ?? [];
+  const serverCount = current?.count ?? 0;
   const results = page === 1 ? mergeSorted(matchedCustomGames, serverItems, sort, PAGE_SIZE) : serverItems;
   const count = serverCount + matchedCustomGames.length;
 
@@ -218,7 +238,7 @@ function ExploreResults({ params }: { params: SharedParams }) {
       consoles={consoles}
       count={count}
       results={results}
-      loading={serverResult === null}
+      loading={current === null}
     />
   );
 }
