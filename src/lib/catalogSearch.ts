@@ -3,13 +3,15 @@
 // entries) so both stay behaviorally identical and never drift apart.
 // Add a new sort option here once and it shows up everywhere that imports it.
 
-export type SortOption = "title" | "publisher" | "releaseYear" | "-releaseYear";
+export type SortOption = "title" | "publisher" | "releaseYear" | "-releaseYear" | "timeToBeat" | "-timeToBeat";
 
 export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "title", label: "Title (A-Z)" },
   { value: "publisher", label: "Publisher (A-Z)" },
   { value: "-releaseYear", label: "Release date (newest)" },
   { value: "releaseYear", label: "Release date (oldest)" },
+  { value: "timeToBeat", label: "Time to beat (shortest)" },
+  { value: "-timeToBeat", label: "Time to beat (longest)" },
 ];
 
 const VALID_SORTS: SortOption[] = SORT_OPTIONS.map((option) => option.value);
@@ -24,6 +26,10 @@ export type CatalogSearchable = {
   publisher: string | null;
   releaseYear: number | null;
   releaseMonth?: number | null;
+  // Not on every caller's data (custom games never have one, and some
+  // Library code paths don't carry it) - missing is the same as "unknown",
+  // same as a null release date.
+  timeToBeatNormally?: number | null;
 };
 
 export type CatalogFilters = {
@@ -88,6 +94,12 @@ export function compareForSort<T extends CatalogSearchable>(a: T, b: T, sort: So
       return (releaseSortValue(a) ?? Infinity) - (releaseSortValue(b) ?? Infinity);
     case "-releaseYear":
       return (releaseSortValue(b) ?? -Infinity) - (releaseSortValue(a) ?? -Infinity);
+    case "timeToBeat":
+      return (a.timeToBeatNormally ?? Infinity) - (b.timeToBeatNormally ?? Infinity);
+    case "-timeToBeat":
+      // A missing value still sorts to the end here, not the start - "unknown"
+      // isn't the same as "longest", so it shouldn't win a longest-first sort.
+      return (b.timeToBeatNormally ?? -Infinity) - (a.timeToBeatNormally ?? -Infinity);
     case "title":
     default:
       return compareSortKeys(sortKey(a.title), sortKey(b.title));
@@ -127,6 +139,16 @@ export function formatReleaseDate(year: number | null, month?: number | null): s
   if (year === null) return null;
   if (month && month >= 1 && month <= 12) return `${MONTH_ABBR[month - 1]} ${year}`;
   return String(year);
+}
+
+// IGDB's time-to-beat is in seconds. Rounds to whole hours once it's over an
+// hour (sub-hour precision isn't meaningful for "how long is this game"),
+// and to whole minutes below that, so very short games don't just show "0h".
+export function formatTimeToBeat(seconds: number | null | undefined): string | null {
+  if (seconds === null || seconds === undefined) return null;
+  const hours = seconds / 3600;
+  if (hours < 1) return `${Math.round(seconds / 60)}m`;
+  return `${Math.round(hours)}h`;
 }
 
 export function getDistinctConsoles<T extends { console?: string | null }>(items: T[]): string[] {

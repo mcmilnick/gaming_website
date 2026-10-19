@@ -15,4 +15,7 @@ export type GameRecord = {
   // True for ROM hacks/mods (IGDB game_type Mod or Fork). Doesn't catch
   // original homebrew - see scripts/fetch-igdb-games.js for why.
   isModOrHack: boolean;
+  // IGDB's "normally" completion-time estimate, in seconds. Crowd-sourced,
+  // so most games don't have one - see scripts/fetch-time-to-beat.js.
+  timeToBeatNormally: number | null;
 };

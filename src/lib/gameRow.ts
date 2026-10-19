@@ -5,7 +5,7 @@ import type { GameRecord } from "./types";
 // own copy (which is how /api/games and /api/games/search had already
 // drifted into duplicates of each other).
 export const GAME_COLUMNS =
-  "id, title, console, developer, publisher, release_year, release_month, cover_url, is_mod_or_hack";
+  "id, title, console, developer, publisher, release_year, release_month, cover_url, is_mod_or_hack, time_to_beat_normally";
 
 export type GameRow = {
   id: string;
@@ -17,6 +17,7 @@ export type GameRow = {
   release_month: number | null;
   cover_url: string | null;
   is_mod_or_hack: boolean;
+  time_to_beat_normally: number | null;
 };
 
 export function toGameRecord(row: GameRow): GameRecord {
@@ -33,5 +34,6 @@ export function toGameRecord(row: GameRow): GameRecord {
     releaseMonth: row.release_month,
     coverUrl: row.cover_url,
     isModOrHack: row.is_mod_or_hack,
+    timeToBeatNormally: row.time_to_beat_normally,
   };
 }

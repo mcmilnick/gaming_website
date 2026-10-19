@@ -12,6 +12,8 @@ const SORT_CLAUSES: Record<string, string> = {
   publisher: "publisher ASC NULLS LAST, title ASC",
   releaseYear: "release_year ASC NULLS LAST, release_month ASC NULLS LAST, title ASC",
   "-releaseYear": "release_year DESC NULLS LAST, release_month DESC NULLS LAST, title ASC",
+  timeToBeat: "time_to_beat_normally ASC NULLS LAST, title ASC",
+  "-timeToBeat": "time_to_beat_normally DESC NULLS LAST, title ASC",
 };
 
 export type SearchOptions = {

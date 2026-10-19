@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "fetch-games": "node --env-file=.env.local scripts/fetch-igdb-games.js"
+    "fetch-games": "node --env-file=.env.local scripts/fetch-igdb-games.js",
+    "fetch-time-to-beat": "node --env-file=.env.local scripts/fetch-time-to-beat.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

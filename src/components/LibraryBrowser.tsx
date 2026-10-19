@@ -86,8 +86,18 @@ export function LibraryBrowser() {
     return map;
   }, [baseGames, customGames]);
 
+  // Time-to-beat isn't part of a Library entry itself (unlike console or
+  // publisher, it's not copied in when you add the game) - it's resolved
+  // from the catalog lookup above, same as cover art and the mod/hack flag.
+  const entriesWithTimeToBeat = useMemo(
+    () => entries.map((entry) => ({ ...entry, timeToBeatNormally: catalogById.get(entry.id)?.timeToBeatNormally ?? null })),
+    [entries, catalogById]
+  );
+
   const filtered = useMemo(() => {
-    let eligible = statusFilter ? entries.filter((entry) => entry.status === statusFilter) : entries;
+    let eligible = statusFilter
+      ? entriesWithTimeToBeat.filter((entry) => entry.status === statusFilter)
+      : entriesWithTimeToBeat;
     if (source === "base") eligible = eligible.filter((entry) => !isCustomGameId(entry.id));
     else if (source === "custom") eligible = eligible.filter((entry) => isCustomGameId(entry.id));
     if (!includeMods) {
@@ -102,7 +112,7 @@ export function LibraryBrowser() {
       return sortByDateAdded(searched, sort);
     }
     return filterAndSortByCatalog(eligible, { search, console: consoleFilter, sort });
-  }, [entries, statusFilter, source, includeMods, search, consoleFilter, sort, catalogById]);
+  }, [entriesWithTimeToBeat, statusFilter, source, includeMods, search, consoleFilter, sort, catalogById]);
 
   const { items: results, count } = paginate(filtered, page, LIBRARY_PAGE_SIZE);
   const totalPages = Math.max(1, Math.ceil(count / LIBRARY_PAGE_SIZE));

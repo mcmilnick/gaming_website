@@ -60,6 +60,8 @@ export function addCustomGame(input: CustomGameInput): GameRecord {
     // Not sourced from IGDB, so there's no mod/hack taxonomy to apply -
     // always visible regardless of the "Include Mods/Hacks" filter.
     isModOrHack: false,
+    // Not sourced from IGDB, so there's nothing to look up - always unknown.
+    timeToBeatNormally: null,
   };
   store.writeAll([...games, game]);
   return game;

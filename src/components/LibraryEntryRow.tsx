@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { removeFromLibrary, updateEntry, STATUS_LABELS, type LibraryEntry, type LibraryStatus } from "@/lib/library";
-import { formatReleaseDate } from "@/lib/catalogSearch";
+import { formatReleaseDate, formatTimeToBeat } from "@/lib/catalogSearch";
 import { useLists } from "@/hooks/useLists";
 import { removeEntryFromList, type GameList, type ListEntry } from "@/lib/lists";
 import { igdbCoverSmall } from "@/lib/igdbImage";
@@ -24,6 +24,7 @@ export function LibraryEntryRow({ entry, catalogGame }: { entry: LibraryEntry; c
   const { lists } = useLists();
   const coverUrl = igdbCoverSmall(catalogGame?.coverUrl);
   const releaseDate = formatReleaseDate(entry.releaseYear, entry.releaseMonth);
+  const timeToBeat = formatTimeToBeat(catalogGame?.timeToBeatNormally);
 
   const memberships = lists
     .map((list) => ({ list, listEntry: list.entries.find((e) => e.gameId === entry.id) }))
@@ -52,6 +53,7 @@ export function LibraryEntryRow({ entry, catalogGame }: { entry: LibraryEntry; c
               {entry.console ? `${entry.console} · ` : ""}
               {entry.publisher ?? "Unknown publisher"}
               {releaseDate ? ` · ${releaseDate}` : ""}
+              {timeToBeat ? ` · ⏱ ${timeToBeat} to beat` : ""}
             </p>
           </div>
           <button

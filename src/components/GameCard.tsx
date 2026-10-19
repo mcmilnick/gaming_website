@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { GameRecord } from "@/lib/types";
 import { isCustomGameId } from "@/lib/customGames";
-import { formatReleaseDate } from "@/lib/catalogSearch";
+import { formatReleaseDate, formatTimeToBeat } from "@/lib/catalogSearch";
 import { LibraryButton } from "./LibraryButton";
 
 function regionBadges(game: GameRecord): string[] {
@@ -15,6 +15,7 @@ function regionBadges(game: GameRecord): string[] {
 
 export function GameCard({ game }: { game: GameRecord }) {
   const isCustom = isCustomGameId(game.id);
+  const timeToBeat = formatTimeToBeat(game.timeToBeatNormally);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
@@ -57,6 +58,7 @@ export function GameCard({ game }: { game: GameRecord }) {
           <p className="mt-1 text-xs text-zinc-500">
             {formatReleaseDate(game.releaseYear, game.releaseMonth) ?? "Year unknown"}
           </p>
+          {timeToBeat && <p className="mt-1 text-xs text-zinc-500">⏱ {timeToBeat} to beat</p>}
         </div>
       </Link>
       <div className="px-3 pb-3">
