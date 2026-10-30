@@ -20,6 +20,9 @@ export function Navbar() {
           <Link href="/lists" className="hover:text-zinc-100">
             My Lists
           </Link>
+          <Link href="/backward-compat" className="hover:text-zinc-100">
+            Backwards Compatibility
+          </Link>
           <Link href="/suggest" className="hover:text-zinc-100">
             Suggest a Game
           </Link>
