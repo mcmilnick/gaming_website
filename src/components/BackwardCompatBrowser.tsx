@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLists } from "@/hooks/useLists";
+import { useLibrary } from "@/hooks/useLibrary";
 import { useCustomGames } from "@/hooks/useCustomGames";
 import { useGamesByIds } from "@/hooks/useGamesByIds";
 import { isCustomGameId } from "@/lib/customGames";
 import { BACKWARD_COMPAT_FROM_CONSOLES, BACKWARD_COMPAT_TARGETS, isBackwardCompatible } from "@/lib/backwardCompat";
 import { Panel } from "@/components/Panel";
 
-type Source = "main" | "list";
+type Source = "main" | "library" | "list";
 type TitledGame = { id: string; title: string };
 
 export function BackwardCompatBrowser() {
@@ -33,7 +34,20 @@ export function BackwardCompatBrowser() {
   const [listId, setListId] = useState("");
 
   const { lists, hydrated: listsHydrated } = useLists();
+  const { entries: libraryEntries, hydrated: libraryHydrated } = useLibrary();
   const { games: customGames } = useCustomGames();
+
+  // Library source: entries already carry their own title and console
+  // (copied in when you added the game - see library.ts), so this is a
+  // plain filter, no catalog lookup needed the way the list source below
+  // requires one.
+  const libraryGames = useMemo(
+    (): TitledGame[] =>
+      libraryEntries
+        .filter((entry) => entry.console === fromConsole)
+        .map((entry) => ({ id: entry.id, title: entry.title })),
+    [libraryEntries, fromConsole]
+  );
 
   // Main-catalog source: every game for the chosen console, straight from
   // the database - not paginated, since this tab needs the whole console's
@@ -78,8 +92,13 @@ export function BackwardCompatBrowser() {
       .filter((game) => game.console === fromConsole);
   }, [source, selectedList, baseGamesById, customGames, fromConsole]);
 
-  const games = source === "main" ? mainGames : listGames;
-  const loading = source === "main" ? mainGames === null : Boolean(selectedList) && !baseGamesHydrated;
+  const games = source === "main" ? mainGames : source === "library" ? libraryGames : listGames;
+  const loading =
+    source === "main"
+      ? mainGames === null
+      : source === "library"
+        ? !libraryHydrated
+        : Boolean(selectedList) && !baseGamesHydrated;
 
   const { compatible, notCompatible } = useMemo(() => {
     const compatible: TitledGame[] = [];
@@ -151,11 +170,12 @@ export function BackwardCompatBrowser() {
               onChange={(e) => {
                 const value = e.target.value as Source;
                 setSource(value);
-                if (value === "main") setListId("");
+                if (value !== "list") setListId("");
               }}
               className="mt-1 block rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
             >
               <option value="main">Main catalog</option>
+              <option value="library">My Library</option>
               <option value="list">One of my lists</option>
             </select>
           </div>
@@ -186,6 +206,14 @@ export function BackwardCompatBrowser() {
       {!toConsole ? (
         <p className="mt-8 text-center text-sm text-zinc-500">
           No backward compatibility targets are defined for {fromConsole} yet.
+        </p>
+      ) : source === "library" && libraryHydrated && libraryEntries.length === 0 ? (
+        <p className="mt-8 text-center text-sm text-zinc-500">
+          Your library is empty - add games on{" "}
+          <Link href="/" className="underline hover:text-zinc-200">
+            All Games
+          </Link>
+          .
         </p>
       ) : source === "list" && listsHydrated && lists.length === 0 ? (
         <p className="mt-8 text-center text-sm text-zinc-500">
