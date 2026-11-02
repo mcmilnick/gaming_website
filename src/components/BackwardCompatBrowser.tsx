@@ -106,6 +106,13 @@ export function BackwardCompatBrowser() {
     for (const game of games ?? []) {
       (isBackwardCompatible(fromConsole, toConsole, game.title) ? compatible : notCompatible).push(game);
     }
+    // The main-catalog source already comes back title-sorted from the
+    // database, but the library and list sources keep their own order (add
+    // order, list order), so this sorts explicitly rather than relying on
+    // whatever order the source happened to produce.
+    const byTitle = (a: TitledGame, b: TitledGame) => a.title.localeCompare(b.title);
+    compatible.sort(byTitle);
+    notCompatible.sort(byTitle);
     return { compatible, notCompatible };
   }, [games, fromConsole, toConsole]);
 
