@@ -218,7 +218,7 @@ export function BackwardCompatBrowser() {
             </div>
           )}
 
-          <StatusFilterSelect value={statusFilter} onChange={setStatusFilter} />
+          <StatusFilterSelect value={statusFilter} onChange={setStatusFilter} label="Play Status" />
         </div>
       </Panel>
 
