@@ -9,6 +9,7 @@ import { useGamesByIds } from "@/hooks/useGamesByIds";
 import { isCustomGameId } from "@/lib/customGames";
 import { BACKWARD_COMPAT_FROM_CONSOLES, BACKWARD_COMPAT_TARGETS, isBackwardCompatible } from "@/lib/backwardCompat";
 import { Panel } from "@/components/Panel";
+import { StatusFilterSelect } from "@/components/StatusFilterSelect";
 
 type Source = "main" | "library" | "list";
 type TitledGame = { id: string; title: string };
@@ -32,6 +33,7 @@ export function BackwardCompatBrowser() {
 
   const [source, setSource] = useState<Source>("main");
   const [listId, setListId] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const { lists, hydrated: listsHydrated } = useLists();
   const { entries: libraryEntries, hydrated: libraryHydrated } = useLibrary();
@@ -100,10 +102,18 @@ export function BackwardCompatBrowser() {
         ? !libraryHydrated
         : Boolean(selectedList) && !baseGamesHydrated;
 
+  // Status is a Library concept, not a catalog or list one, so it's applied
+  // the same way regardless of source: cross-reference each game's id
+  // against your Library entries. For the library source itself this just
+  // reduces to "keep entries with this status" - the same rule the Library
+  // page applies - since every id there already is a library entry.
+  const statusById = useMemo(() => new Map(libraryEntries.map((entry) => [entry.id, entry.status])), [libraryEntries]);
+
   const { compatible, notCompatible } = useMemo(() => {
     const compatible: TitledGame[] = [];
     const notCompatible: TitledGame[] = [];
     for (const game of games ?? []) {
+      if (statusFilter && statusById.get(game.id) !== statusFilter) continue;
       (isBackwardCompatible(fromConsole, toConsole, game.title) ? compatible : notCompatible).push(game);
     }
     // The main-catalog source already comes back title-sorted from the
@@ -114,7 +124,7 @@ export function BackwardCompatBrowser() {
     compatible.sort(byTitle);
     notCompatible.sort(byTitle);
     return { compatible, notCompatible };
-  }, [games, fromConsole, toConsole]);
+  }, [games, fromConsole, toConsole, statusFilter, statusById]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -207,6 +217,8 @@ export function BackwardCompatBrowser() {
               </select>
             </div>
           )}
+
+          <StatusFilterSelect value={statusFilter} onChange={setStatusFilter} />
         </div>
       </Panel>
 

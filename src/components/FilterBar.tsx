@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { CatalogFilterFields } from "./CatalogFilterFields";
-import { STATUS_OPTIONS } from "@/lib/library";
+import { StatusFilterSelect } from "./StatusFilterSelect";
 
 type FilterKey = "search" | "console" | "sort" | "source" | "includeMods" | "hideInLibrary" | "status";
 
@@ -88,18 +88,7 @@ export function FilterBar<S extends string>({
             sortOptions={sortOptions}
           />
 
-          <select
-            value={currentStatus}
-            onChange={(e) => navigate({ status: e.target.value })}
-            className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
-          >
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <StatusFilterSelect value={currentStatus} onChange={(value) => navigate({ status: value })} />
         </div>
 
         <div className="flex flex-col gap-1.5">
