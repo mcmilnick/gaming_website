@@ -3,29 +3,58 @@
 import { useRef, useState } from "react";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useCustomGames } from "@/hooks/useCustomGames";
-import { exportAllDataAsJson, importFromJson, type ImportMode, type ImportResult } from "@/lib/dataExport";
+import { useLists } from "@/hooks/useLists";
+import { exportAllDataAsJson, exportListsAsJson, importFromJson, type ImportMode, type ImportResult } from "@/lib/dataExport";
+
+// Just enough to make a downloaded filename readable - doesn't need to match
+// the canonical slugify in lists.ts, since this is display only.
+function slugifyForFilename(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function downloadJson(json: string, filename: string) {
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 export default function BackupPage() {
   const { entries: libraryEntries } = useLibrary();
   const { games: customGames } = useCustomGames();
+  const { lists } = useLists();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [mode, setMode] = useState<ImportMode>("merge");
   const [results, setResults] = useState<ImportResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exportListId, setExportListId] = useState("");
 
   function handleExport() {
-    const json = exportAllDataAsJson();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
     const stamp = new Date().toISOString().slice(0, 10);
-    link.href = url;
-    link.download = `any-stat-gaming-backup-${stamp}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadJson(exportAllDataAsJson(), `any-stat-gaming-backup-${stamp}.json`);
+  }
+
+  // Shares one list (or all of them) as its own file, in the same backup
+  // format - so the recipient can drop it straight into Import with Merge
+  // and it just adds the list(s), without touching anything else of
+  // theirs. See buildListsExportPayload for why this is safe even in
+  // Replace mode (it never carries a "library" key).
+  function handleExportLists() {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const selected = lists.find((list) => list.id === exportListId);
+    const filename = selected
+      ? `any-stat-gaming-list-${slugifyForFilename(selected.name)}-${stamp}.json`
+      : `any-stat-gaming-lists-${stamp}.json`;
+    downloadJson(exportListsAsJson(exportListId || undefined), filename);
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -77,6 +106,35 @@ export default function BackupPage() {
         >
           Download backup file
         </button>
+
+        {lists.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportLists}
+              className="rounded border border-emerald-700 bg-emerald-900/40 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-900/60"
+            >
+              Export Lists
+            </button>
+            <select
+              value={exportListId}
+              onChange={(e) => setExportListId(e.target.value)}
+              aria-label="Which list to export"
+              className="rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+            >
+              <option value="">All Lists</option>
+              {lists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name} ({list.entries.length})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <p className="mt-2 text-xs text-zinc-500">
+          Send that file to someone else, or just keep it. They (or you, on another device) can load
+          it under Import below with Merge selected to add the list without touching anything else.
+        </p>
       </section>
 
       <section className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900 p-4">

@@ -1,5 +1,5 @@
 import { getLibrary, replaceLibrary, type LibraryEntry } from "./library";
-import { getCustomGames, replaceCustomGames } from "./customGames";
+import { getCustomGames, replaceCustomGames, isCustomGameId } from "./customGames";
 import { getLists, replaceLists, type GameList } from "./lists";
 import type { GameRecord } from "./types";
 
@@ -52,6 +52,38 @@ export function buildExportPayload(): ExportPayload {
 
 export function exportAllDataAsJson(): string {
   return JSON.stringify(buildExportPayload(), null, 2);
+}
+
+// A sharing export: one list, or all of them, without the rest of your
+// data. The "lists" key is always present (even as an empty array, if a
+// list somehow has no entries) so the recipient's import always shows a
+// result for it, but "library" is never included at all - not even as an
+// empty array - so importing this file in Replace mode can't wipe someone
+// else's Library or their own other lists. Any custom (user-added) games
+// the exported list(s) reference are bundled in too, under "customGames",
+// so an entry pointing at one of your own added games isn't left dangling
+// with nothing to resolve to on the other end.
+export function buildListsExportPayload(listId?: string): ExportPayload {
+  const allLists = getLists();
+  const lists = listId ? allLists.filter((list) => list.id === listId) : allLists;
+
+  const referencedCustomIds = new Set(
+    lists.flatMap((list) => list.entries.map((entry) => entry.gameId)).filter(isCustomGameId)
+  );
+  const customGames = getCustomGames().filter((game) => referencedCustomIds.has(game.id));
+
+  const data: Record<string, unknown[]> = { lists };
+  if (customGames.length > 0) data.customGames = customGames;
+
+  return {
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+}
+
+export function exportListsAsJson(listId?: string): string {
+  return JSON.stringify(buildListsExportPayload(listId), null, 2);
 }
 
 export type ImportMode = "merge" | "replace";
